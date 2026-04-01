@@ -1,0 +1,46 @@
+{
+    "log": true,
+    "offlog": false,
+    "wandb": true,
+
+    "optimizer": "sgd",
+    "datadir": "dataset",
+    "device": "cuda",
+    "device_id": "0",
+    "prev": 0,
+    "times": 1,
+    "dataset": "CIFAR100",
+    "num_classes": 100,
+    "model": "ResNet18",
+
+    "batch_size": 64,
+    "local_learning_rate": 0.01,
+    "learning_rate_decay": false,
+
+    "global_rounds": 200,
+    "local_epochs": 1,
+
+    "algorithm": "LANDER",
+    "client_drop_rate": 0.0,
+    "time_threthold": 10000,
+    "join_ratio": 1.0,
+    "num_clients": 5,
+    "learning_rate_decay_gamma": 0.99,
+    "num_tasks": 5,
+    "random_join_ratio": false,
+    "eval_gap": 1,
+    "out_folder": "out",
+    "note": "cifar100_t5_niid05",
+
+    "non_iid": "dirichlet",
+    "alpha": 0.5,
+
+    "lander_T": 2,
+    "lander_kd": 1.0,
+    "lander_lambda_bound": 0.5,
+    "lander_radius": 1.0,
+    "lander_text_encoder": "clip",
+    "lander_text_template": "a photo of a {}",
+    "feature_dim": 512
+}
+
