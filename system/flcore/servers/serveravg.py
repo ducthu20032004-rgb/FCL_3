@@ -229,7 +229,7 @@ class FedAvg(Server):
                     
                     ret = _call_client_train(client, task=task, round_idx=i, glob_iter=glob_iter)
 
-                    if client.id in [0, 1]:  # chỉ lưu 2 client
+                    if client.id in [0, 1,2,3,4,5,6,7,8,9]:  
                         try:
                             save_dir = "/kaggle/working/checkpoints"
                             os.makedirs(save_dir, exist_ok=True)

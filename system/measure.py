@@ -43,11 +43,11 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 # Đường dẫn checkpoint
 # ─────────────────────────────────────────────────────────────────────────────
-def get_model_path(saving_dir: str, client_id: int, task: int) -> str:
+def get_model_path(saving_dir: str, client_id: int, task: int, round: int) -> str:
     """
     D:/FCL/checkpoints_client_task/client_0_task_4.pt
     """
-    return os.path.join(saving_dir, f'client_{client_id}_task_{task}.pt')
+    return os.path.join(saving_dir, f'client_{client_id}_task_{task}_round_{round}.pt')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -146,16 +146,16 @@ def compute_feature_resnet18(_model, _model_task_index, _dataset, _target_layer_
     seed               : seed value
     args               : argparse namespace (cần args.partition_options, args.backbone)
     """
-    cache_dir = os.getenv("CACHE_DIR", "./cache")
-    fname = (
-        f'{cache_dir}/{args.partition_options}-{seed}-{args.backbone}'
-        f'-task{_model_task_index}-layer{_target_layer_index}.pkl'
-    )
+    # cache_dir = os.getenv("CACHE_DIR", "./cache")
+    # fname = (
+    #     f'{cache_dir}/{args.partition_options}-{seed}-{args.backbone}'
+    #     f'-task{_model_task_index}-round{round}-layer{_target_layer_index}.pkl'
+    # )
 
-    # ── Load cache nếu đã có ──────────────────────────────────────────────────
-    if os.path.isfile(fname):
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
+    # # ── Load cache nếu đã có ──────────────────────────────────────────────────
+    # if os.path.isfile(fname):
+    #     with open(fname, 'rb') as f:
+    #         return pickle.load(f)
 
     # ── Wrap ResNet18 layers thành blocks dict (giống code gốc) ──────────────
     blocks = get_resnet18_blocks(_model)
@@ -164,7 +164,7 @@ def compute_feature_resnet18(_model, _model_task_index, _dataset, _target_layer_
     outputs = []
 
     with torch.no_grad():
-        for data in tqdm(_dataset, desc=f'Computing feature of M_{_model_task_index}^{_target_layer_index}...'):
+        for data in tqdm(_dataset, desc=f'Computing feature of M_{_model_task_index}^{_target_layer_index}...',disable=True):
             features, targets = data
             features = features.unsqueeze(0)  # (1, C, H, W)
 
@@ -181,10 +181,10 @@ def compute_feature_resnet18(_model, _model_task_index, _dataset, _target_layer_
 
     outputs = np.array(outputs)
 
-    # ── Lưu cache ─────────────────────────────────────────────────────────────
-    os.makedirs(cache_dir, exist_ok=True)
-    with open(fname, 'wb') as f:
-        pickle.dump(outputs, f)
+    # # ── Lưu cache ─────────────────────────────────────────────────────────────
+    # os.makedirs(cache_dir, exist_ok=True)
+    # with open(fname, 'wb') as f:
+    #     pickle.dump(outputs, f)
 
     return outputs
 def test_metrics(model, testloader):
@@ -278,127 +278,128 @@ def measure_all_representation_drift(args):
         args.client = client_id
 
         for (t, tprime) in task_pairs:
-            logger.info(f'  ┌── Task pair ({t}, {tprime})')
+            for round in range(25):
+                logger.info(f'  ┌── Task pair ({t}, {tprime})')
 
-            # Kiểm tra checkpoint tồn tại trước khi load
-            ckpt_t  = get_model_path(args.saving_dir, client_id, t)
-            ckpt_tp = get_model_path(args.saving_dir, client_id, tprime)
-            for ckpt in [ckpt_t, ckpt_tp]:
-                if not os.path.isfile(ckpt):
-                    logger.error(f'  [MISSING] {ckpt}')
-                    continue
+                # Kiểm tra checkpoint tồn tại trước khi load
+                ckpt_t  = get_model_path(args.saving_dir, client_id, t, round)
+                ckpt_tp = get_model_path(args.saving_dir, client_id, tprime, round)
+                for ckpt in [ckpt_t, ckpt_tp]:
+                    if not os.path.isfile(ckpt):
+                        logger.error(f'  [MISSING] {ckpt}')
+                        continue
 
-            # Load model t
-            model_t      = load_resnet18_from_checkpoint(ckpt_t, load_head=False)
-            model_t.eval()
-            logger.info(f'  │  model_t  ← {ckpt_t}')
+                # Load model t
+                model_t      = load_resnet18_from_checkpoint(ckpt_t, load_head=False)
+                model_t.eval()
+                logger.info(f'  │  model_t  ← {ckpt_t}')
 
-            # Load model t'
-            model_tprime = load_resnet18_from_checkpoint(ckpt_tp, load_head=False)
-            model_tprime.eval()
-            logger.info(f'  │  model_t\' ← {ckpt_tp}')
+                # Load model t'
+                model_tprime = load_resnet18_from_checkpoint(ckpt_tp, load_head=False)
+                model_tprime.eval()
+                logger.info(f'  │  model_t\' ← {ckpt_tp}')
 
-            # Load probe data (data của task t)
-            test_data_t = read_client_data_FCL_cifar10(
-                client_id, task=t,
-                classes_per_task=args.cpt,
-                count_labels=False, train=False
-            )
-            test_data_tprime = read_client_data_FCL_cifar10(
-                client_id, task=tprime,
-                classes_per_task=args.cpt,
-                count_labels=False, train=False 
-            )
+                # Load probe data (data của task t)
+                test_data_t = read_client_data_FCL_cifar10(
+                    client_id, task=t,
+                    classes_per_task=args.cpt,
+                    count_labels=False, train=False
+                )
+                test_data_tprime = read_client_data_FCL_cifar10(
+                    client_id, task=tprime,
+                    classes_per_task=args.cpt,
+                    count_labels=False, train=False 
+                )
 
-            # Đo accuracy + forgetting của model_t' trên data t' (để có thêm thông tin về drift)
-            model_head_tp = load_model_with_head(ckpt_tp, num_classes=10)
+                # Đo accuracy + forgetting của model_t' trên data t' (để có thêm thông tin về drift)
+                model_head_tp = load_model_with_head(ckpt_tp, num_classes=10)
 
-            loader_tprime = DataLoader(test_data_tprime, batch_size=64, shuffle=False)
-            loader_t      = DataLoader(test_data_t,      batch_size=64, shuffle=False)
-            
-            current_test_acc, _ = test_metrics(model_head_tp, loader_tprime)
-            old_test_acc, _ = test_metrics(model_head_tp, loader_t)
-            #forgetting = compute_forgetting(model_head_tp,test_acc, tprime,t)
-            
-            for k in range(num_blocks):
-                target_layer = f'block{k}'
-                try:
-                    # Extract features
-                    feat_t = compute_feature_resnet18(
-                        model_t,      t,      test_data_t, target_layer, args.seed, args)
-                    feat_tp = compute_feature_resnet18(
-                        model_tprime, tprime, test_data_tprime, target_layer, args.seed, args)
+                loader_tprime = DataLoader(test_data_tprime, batch_size=64, shuffle=False)
+                loader_t      = DataLoader(test_data_t,      batch_size=64, shuffle=False)
+                
+                current_test_acc, _ = test_metrics(model_head_tp, loader_tprime)
+                old_test_acc, _ = test_metrics(model_head_tp, loader_t)
+                #forgetting = compute_forgetting(model_head_tp,test_acc, tprime,t)
+                
+                for k in range(num_blocks):
+                    target_layer = f'block{k}'
+                    try:
+                        # Extract features
+                        feat_t = compute_feature_resnet18(
+                            model_t,      t,      test_data_t, target_layer, args.seed, args)
+                        feat_tp = compute_feature_resnet18(
+                            model_tprime, tprime, test_data_tprime, target_layer, args.seed, args)
 
-                    # Width: block0 (stem) không có BasicBlock → nan
-                    if k == 0:
-                        width_t = width_tp = float('nan')
-                    else:
-                        width_t  = compute_width(model_t,      k - 1)
-                        width_tp = compute_width(model_tprime, k - 1)
+                        # Width: block0 (stem) không có BasicBlock → nan
+                        if k == 0:
+                            width_t = width_tp = float('nan')
+                        else:
+                            width_t  = compute_width(model_t,      k - 1)
+                            width_tp = compute_width(model_tprime, k - 1)
 
-                    eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t)
-                    sigma = compute_sigma(feat_t, feat_tp)
-                    eps   = compute_eps(feat_t, feat_tp)
-                    device = torch.device('cpu')
-                    hsic = TorchCKA(device=device).linear_HSIC(
-                        torch.from_numpy(feat_t).float(),
-                        torch.from_numpy(feat_tp).float()
-                    )
-                    cka = hsic / (torch.sqrt(TorchCKA(device=device).linear_HSIC(
-                        torch.from_numpy(feat_t).float(),
-                        torch.from_numpy(feat_t).float()
-                    )) * torch.sqrt(TorchCKA(device=device).linear_HSIC(
-                        torch.from_numpy(feat_tp).float(),
-                        torch.from_numpy(feat_tp).float()
-                    )))
-                    done += 1
-                    progress = f'[{done}/{total}]'
+                        eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t)
+                        sigma = compute_sigma(feat_t, feat_tp)
+                        eps   = compute_eps(feat_t, feat_tp)
+                        device = torch.device('cpu')
+                        hsic = TorchCKA(device=device).linear_HSIC(
+                            torch.from_numpy(feat_t).float(),
+                            torch.from_numpy(feat_tp).float()
+                        )
+                        cka = hsic / (torch.sqrt(TorchCKA(device=device).linear_HSIC(
+                            torch.from_numpy(feat_t).float(),
+                            torch.from_numpy(feat_t).float()
+                        )) * torch.sqrt(TorchCKA(device=device).linear_HSIC(
+                            torch.from_numpy(feat_tp).float(),
+                            torch.from_numpy(feat_tp).float()
+                        )))
+                        done += 1
+                        progress = f'[{done}/{total}]'
 
-                    # ── Terminal + log file ───────────────────────────────────
-                    logger.info(
-                        f'  │  {progress} {target_layer} | '
-                        f'σ={sigma:.4f}  ε={eps:.4f}  CKA={cka:.4f} '
-                        f'  Accuracy {tprime}: {current_test_acc*100:.4f}  Accuracy {t}: {old_test_acc*100:.4f} '
-                        f'η_min={eta_min_n:.4f}  η_max={eta_max_n:.4f}  '
-                        f'W_t={width_t:.4f}  W_t\'={width_tp:.4f}'
-                        f'  HSIC={hsic:.4f} '
-                    )
+                        # ── Terminal + log file ───────────────────────────────────
+                        logger.info(
+                            f'  │  {progress} {target_layer} | '
+                            f'σ={sigma:.4f}  ε={eps:.4f}  CKA={cka:.4f} '
+                            f'  Accuracy {tprime}: {current_test_acc*100:.4f}  Accuracy {t}: {old_test_acc*100:.4f} '
+                            f'η_min={eta_min_n:.4f}  η_max={eta_max_n:.4f}  '
+                            f'W_t={width_t:.4f}  W_t\'={width_tp:.4f}'
+                            f'  HSIC={hsic:.4f} '  
+                        )
 
-                    # ── WandB: log từng metric theo (client, task_pair, block) ─
-                    if args.use_wandb:
-                        wandb.log({
-                            'client':        client_id,
-                            'block':         k,
-                            't':             t,
-                            'tprime':        tprime,
-                            'sigma':         sigma,
-                            'eps':           eps,
-                            f'accuracy_{tprime}': current_test_acc * 100,
-                            f'accuracy_{t}': old_test_acc * 100,
-                            'eta_min_norm':  eta_min_n,
-                            'eta_max_norm':  eta_max_n,
-                            'width_t':       width_t,
-                            'width_tprime':  width_tp,
-                            # key tổng hợp để filter trên wandb dashboard
-                            'pair':          f'({t},{tprime})',
-                            'client_block':  f'c{client_id}_b{k}',
-                        })
+                        # ── WandB: log từng metric theo (client, task_pair, block) ─
+                        if args.use_wandb:
+                            wandb.log({
+                                'client':        client_id,
+                                'block':         k,
+                                't':             t,
+                                'tprime':        tprime,
+                                'sigma':         sigma,
+                                'eps':           eps,
+                                f'accuracy_{tprime}': current_test_acc * 100,
+                                f'accuracy_{t}': old_test_acc * 100,
+                                'eta_min_norm':  eta_min_n,
+                                'eta_max_norm':  eta_max_n,
+                                'width_t':       width_t,
+                                'width_tprime':  width_tp,
+                                # key tổng hợp để filter trên wandb dashboard
+                                'pair':          f'({t},{tprime})',
+                                'client_block':  f'c{client_id}_b{k}',
+                            })
 
-                    # ── CSV ───────────────────────────────────────────────────
-                    with open(output_file, 'a') as f:
-                        row = [client_id, k, t, tprime,
-                               eta_min, eta_max, eta_min_n, eta_max_n,
-                               sigma, eps, width_t, width_tp]
-                        f.write(','.join(map(str, row)) + '\n')
+                        # ── CSV ───────────────────────────────────────────────────
+                        with open(output_file, 'a') as f:
+                            row = [client_id, k, t, tprime,
+                                eta_min, eta_max, eta_min_n, eta_max_n,
+                                sigma, eps, width_t, width_tp]
+                            f.write(','.join(map(str, row)) + '\n')
 
-                except Exception as e:
-                    logger.error(
-                        f'  │  [SKIP] client={client_id} {target_layer} '
-                        f't={t} t\'={tprime} | {e}'
-                    )
-                    continue
+                    except Exception as e:
+                        logger.error(
+                            f'  │  [SKIP] client={client_id} {target_layer} '
+                            f't={t} t\'={tprime} | {e}'
+                        )
+                        continue
 
-            logger.info(f'  └── Task pair ({t}, {tprime}) done')
+                logger.info(f'  └── Task pair ({t}, {tprime}) done')
 
     logger.info(f'\n✅  Hoàn thành! CSV → {output_file}')
 
@@ -559,7 +560,8 @@ def main(args):
         )
 
     if args.backbone == 'ResNet18':
-        measure_all_representation_drift(args)
+        for round in range(25):
+            measure_all_representation_drift(args)
         #measure_all_drift_follow_task(args)
     else:
         raise ValueError(f'Backbone chưa hỗ trợ: {args.backbone}')

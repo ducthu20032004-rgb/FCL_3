@@ -1,0 +1,26 @@
+x,y
+"tensor(0.0670, device='cuda:0')",80.72503662109375
+"tensor(0.0874, device='cuda:0')",76.1953353881836
+"tensor(0.0901, device='cuda:0')",66.9166030883789
+"tensor(0.0967, device='cuda:0')",65.75718688964844
+"tensor(0.0969, device='cuda:0')",64.1026840209961
+"tensor(0.1019, device='cuda:0')",68.3001937866211
+"tensor(0.0989, device='cuda:0')",61.39320755004883
+"tensor(0.1047, device='cuda:0')",60.145423889160156
+"tensor(0.1023, device='cuda:0')",63.1566276550293
+"tensor(0.1077, device='cuda:0')",61.76218795776367
+"tensor(0.1071, device='cuda:0')",60.467796325683594
+"tensor(0.1052, device='cuda:0')",60.725830078125
+"tensor(0.1094, device='cuda:0')",60.33236312866211
+"tensor(0.1069, device='cuda:0')",60.63041305541992
+"tensor(0.1097, device='cuda:0')",59.55012893676758
+"tensor(0.1132, device='cuda:0')",60.069942474365234
+"tensor(0.1104, device='cuda:0')",60.31037139892578
+"tensor(0.1133, device='cuda:0')",60.13528823852539
+"tensor(0.1144, device='cuda:0')",59.70543670654297
+"tensor(0.1141, device='cuda:0')",59.83539581298828
+"tensor(0.1157, device='cuda:0')",60.28266143798828
+"tensor(0.1174, device='cuda:0')",60.97834014892578
+"tensor(0.1173, device='cuda:0')",59.376895904541016
+"tensor(0.1191, device='cuda:0')",60.12480926513672
+"tensor(0.1199, device='cuda:0')",59.22780227661133

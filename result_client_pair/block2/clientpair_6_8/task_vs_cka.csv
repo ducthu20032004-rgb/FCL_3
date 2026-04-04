@@ -1,0 +1,2 @@
+x,y
+4,"tensor(0.3939, device='cuda:0')"
