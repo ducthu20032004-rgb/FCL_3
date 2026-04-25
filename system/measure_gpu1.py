@@ -1042,13 +1042,9 @@ def measure_follow_training(args):
         with open(output_file, 'w') as f:
             f.write(
                 'client,block,task,round,FM,accuracy_old,'
-                'drift_neuron,curr_min_neuron,curr_max_neuron,prev_min,prev_max'
-                'overlap@20,cosine_neuron,'
-                'sigma_current,eps_current,width_t,'
+                'sigma_current,eps_current,'
                 'sigma_old,eps_old,cosine,'
-                'linearCKA,non-linearCKA,kernelCKA,bwt'
-                'align@150_old,'
-                'dim,'
+                'linearCKA,non-linearCKA,kernelCKA,bwt,'
                 'accuracy_current\n'
             )
 
@@ -1266,7 +1262,7 @@ def measure_follow_training(args):
                     f"Neuron drift={drift_neuron:.4f} | "
                     f"curr_range=({curr_min:.4f},{curr_max:.4f}) | "
                     f"prev_range=({prev_min:.4f},{prev_max:.4f}) | "
-                    f"overlap@20={overlap:.4f} | "
+                    f"overlap@50={overlap:.4f} | "
                     f"cosine={cosine_neuron:.4f}"
                 )
                 round_global += 1
@@ -1361,12 +1357,9 @@ def measure_follow_training(args):
                         with open(output_file, 'a') as f:
                             csv_row = [
                                 client_id, block_idx, task, round_idx, forgetting, acc_curr_on_old,
-                                drift_neuron, curr_min, curr_max, prev_min, prev_max, overlap, cosine_neuron,
-                                sigma_on_curr_data, eps_on_curr_data, width_curr,
+                                sigma_on_curr_data, eps_on_curr_data, 
                                 sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
                                 linear_cka, nl_cka, kernel_cka, bwt,
-                                align_old_150,
-                                ratio_feat,
                                 acc_curr_on_curr,
                             ]
                             f.write(','.join(map(str, csv_row)) + '\n')
