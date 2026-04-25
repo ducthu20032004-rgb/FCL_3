@@ -428,8 +428,12 @@ def to_float(x):
 # Hàm đo chính
 # ─────────────────────────────────────────────────────────────────────────────
 def measure_all_representation_drift(args):
+    if args.kaggle == False:
+        root = 'outputs'
+    else :
+        root = 'kaggle/working'
     output_file = (
-        f'./outputs/Task_round_representation_drift'
+        f'./{root}/representation_drift_temporal_25_4'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
@@ -437,14 +441,13 @@ def measure_all_representation_drift(args):
         with open(output_file, 'w') as f:
             f.write(
                 'client,block,t,tprime,'
-                'eta_min,eta_max,eta_min_norm,eta_max_norm,'
-                'sigma,eps,width_t,width_tprime,'          # FIX: thiếu dấu phẩy cuối
-                'cka,linear_cka,kernel_cka,'
+                'sigma_old,eps_old,'          # FIX: thiếu dấu phẩy cuối
+                'cka_old,linear_cka_old,kernel_cka_old,'
+                'cka_curr,linear_cka_curr,kernel_cka_curr,'  # NEW
                 'old_test_acc,current_test_acc,acc_t_on_head,'
-                'cosine_similarity,align100,align150,'
+                'cosine_similarity,align150,'
                 'drift_neuron,cosine_neuron,overlap_at50,'          # NEW
-                'cka_gap,overlap_deficit,cka_vs_overlap_residual,'  # NEW
-                'acc_drop_rate,drift_per_acc_unit\n'                # NEW
+                'drift_per_acc_unit\n'                # NEW
             )
 
     task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
@@ -468,7 +471,7 @@ def measure_all_representation_drift(args):
         for (t, tprime) in task_pairs:
             scatters = {
                 block_idx: ScatterLogger(
-                    f"results_14_4/block{block_idx}/taskpair_{t}_{tprime}"
+                    f"/{root}/results_25_4/block{block_idx}/taskpair_{t}_{tprime}"
                 )
                 for block_idx in range(num_blocks)
             }
@@ -799,17 +802,14 @@ def measure_all_representation_drift(args):
                         # ── CSV write ─────────────────────────────────────────
                         try:
                             line = (
-                                f'{client_id},{block_idx},{t},{tprime},'
-                                f'{eta_min},{eta_max},{eta_min_n},{eta_max_n},'
-                                f'{sigma_old},{eps_old},{width_t},{width_tp},'
+                                f'{client_id},{block_idx},{t},{tprime},'                                
+                                f'{sigma_old},{eps_old},'
                                 f'{float(cka_old)},{float(linear_cka_old)},{float(kernel_cka_old)},'
                                 f'{float(cka_curr)},{float(linear_cka_curr)},{float(kernel_cka_curr)},'
                                 f'{old_test_acc},{current_test_acc},{acc_t_on_head},'
                                 f'{cos_logit_mean},'
-                                f'{align_score[100]},{align_score[150]},'
+                                f'{align_score[150]},'
                                 f'{drift_neuron},{cosine_neuron},{overlap},'
-                                f'{cka_gap},{overlap_deficit},{cka_vs_overlap_residual},'
-                                f'{acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float("nan")},'
                                 f'{drift_per_acc}\n'
                             )
 
