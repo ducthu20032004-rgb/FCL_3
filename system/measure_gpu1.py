@@ -613,7 +613,8 @@ def measure_all_representation_drift(args):
                         sigma_curr         = compute_sigma(feat_t_curr, feat_tp_curr)
                         eps_curr           = compute_eps(feat_t_curr, feat_tp_curr)
                         hsic_val, cka_curr = compute_cka(feat_t_curr, feat_tp_curr)
-
+                        gap_eps = eps_curr - eps_old
+                        gap_sigma = sigma_curr - sigma_old
                         feat_t_tensor_curr  = torch.from_numpy(feat_t_curr).float().to(DEVICE)
                         feat_tp_tensor_curr = torch.from_numpy(feat_tp_curr).float().to(DEVICE)
                         cka_obj        = TorchCKA(device=DEVICE)
@@ -664,7 +665,7 @@ def measure_all_representation_drift(args):
                             f'drift_neuron={drift_neuron:.4f}  '
                             f'cosine_neuron={cosine_neuron:.4f}  '
                             f'overlap@{k_top}={overlap:.4f}  '
-                            f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}  '
+                            f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}  gap_σ={gap_sigma:.4f}  gap_ε={gap_eps:.4f}  '
                             f'σ_curr={sigma_curr:.4f}  ε_curr={eps_curr:.4f}  '
                             f'CKA_old={cka_old:.4f}  linear_CKA_old={float(linear_cka_old):.4f}  '
                             f'kernel_CKA_old={float(kernel_cka_old):.4f}  '
@@ -760,6 +761,8 @@ def measure_all_representation_drift(args):
                                 f'{prefix}/eps_old': eps_old,
                                 f'{prefix}/sigma_curr': sigma_curr,
                                 f'{prefix}/eps_curr': eps_curr,
+                                f'{prefix}/gap_sigma': gap_sigma,
+                                f'{prefix}/gap_eps': gap_eps,
                                 f'{prefix}/accuracy_tprime': current_test_acc * 100,
                                 f'{prefix}/accold_taskpair_{t}_{tprime}': old_test_acc * 100,
                                 f'{prefix}/acc_t_on_head': acc_t_on_head * 100,
