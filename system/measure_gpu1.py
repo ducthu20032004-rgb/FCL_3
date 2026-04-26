@@ -468,6 +468,7 @@ def measure_all_representation_drift(args):
         logger.info('=' * 60)
         args.client = client_id
         client_class_order = all_class_orders[client_id][:10]
+        list_acc_matrix = []
         for (t, tprime) in task_pairs:
             scatters = {
                 block_idx: ScatterLogger(
@@ -543,7 +544,8 @@ def measure_all_representation_drift(args):
                 acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
                 current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
                 old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
-                drop_acc = acc_t_on_head - old_test_acc
+                list_acc_matrix.append(acc_t_on_head)
+                drop_acc = max(list_acc_matrix) - old_test_acc
                 # ── Neuron importance (layer4[-1], fixed) ────────────────────
                 target_layer_tp = [model_tprime.layer4[-1]]
                 model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
@@ -669,6 +671,7 @@ def measure_all_representation_drift(args):
                             f'CKA_curr={cka_curr:.4f}  linear_CKA_curr={float(linear_cka_curr):.4f}  '
                             f'kernel_CKA_curr={float(kernel_cka_curr):.4f}  '
                             f'cka_gap={cka_gap:.4f}  '
+                            f'forgetting={drop_acc*100:.4f}%'
                             f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
                             f'ratio={ratio_feature:.4f}  '
                             f'align@100={align_score[100]:.4f}  '
