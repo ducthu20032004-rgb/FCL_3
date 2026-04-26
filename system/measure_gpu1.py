@@ -543,7 +543,7 @@ def measure_all_representation_drift(args):
                 acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
                 current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
                 old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
-
+                drop_acc = acc_t_on_head - old_test_acc
                 # ── Neuron importance (layer4[-1], fixed) ────────────────────
                 target_layer_tp = [model_tprime.layer4[-1]]
                 model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
@@ -759,7 +759,8 @@ def measure_all_representation_drift(args):
                                 f'{prefix}/eps_curr': eps_curr,
                                 f'{prefix}/accuracy_tprime': current_test_acc * 100,
                                 f'{prefix}/accold_taskpair_{t}_{tprime}': old_test_acc * 100,
-
+                                f'{prefix}/acc_t_on_head': acc_t_on_head * 100,
+                                f'{prefix}/acc_drop_rate': acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'),
                                 f'{prefix}/cos_logit_mean': cos_logit_mean,
 
                                 # neuron-level
