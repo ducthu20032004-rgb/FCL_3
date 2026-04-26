@@ -444,7 +444,7 @@ def measure_all_representation_drift(args):
                 'sigma_old,eps_old,'          # FIX: thiếu dấu phẩy cuối
                 'cka_old,linear_cka_old,kernel_cka_old,'
                 'cka_curr,linear_cka_curr,kernel_cka_curr,'  # NEW
-                'old_test_acc,current_test_acc,acc_t_on_head,'
+                'old_test_acc,current_test_acc,acc_t_on_head,forgetting_drop,'
                 'cosine_similarity,align150,'
                 'drift_neuron,cosine_neuron,overlap_at50,'          # NEW
                 'drift_per_acc_unit\n'                # NEW
@@ -810,7 +810,7 @@ def measure_all_representation_drift(args):
                                 f'{sigma_old},{eps_old},'
                                 f'{float(cka_old)},{float(linear_cka_old)},{float(kernel_cka_old)},'
                                 f'{float(cka_curr)},{float(linear_cka_curr)},{float(kernel_cka_curr)},'
-                                f'{old_test_acc},{current_test_acc},{acc_t_on_head},'
+                                f'{old_test_acc},{current_test_acc},{acc_t_on_head},{drop_acc*100},'
                                 f'{cos_logit_mean},'
                                 f'{align_score[150]},'
                                 f'{drift_neuron},{cosine_neuron},{overlap},'
