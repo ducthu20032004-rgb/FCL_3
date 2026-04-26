@@ -1035,11 +1035,9 @@ def measure_follow_training(args):
         f'./{root}/representation_drift_temporal_25_4'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
-    output_file_neuron_heatmap = (
-        f'./{root}/neuron_heatmap.csv'
-    )
+
     if not os.path.isfile(output_file):
-        with open(output_file, 'w') as f:
+        with open(output_file, 'a') as f:
             f.write(
                 'client,block,task,round,FM,accuracy_old,'
                 'sigma_current,eps_current,'
@@ -1047,11 +1045,23 @@ def measure_follow_training(args):
                 'linearCKA,non-linearCKA,kernelCKA,bwt,'
                 'accuracy_current\n'
             )
-
-    if not os.path.isfile(output_file_neuron_heatmap):
-        with open(output_file_neuron_heatmap, 'w') as f:
-            header = 'task,round_idx,' + ','.join(f'n{i}' for i in range(512))
-            f.write(header + '\n')
+    # ── Chỉ ghi header nếu file CHƯA tồn tại hoặc rỗng ──────────────────
+    header = (
+        'client,block,task,round,FM,accuracy_old,'
+        'sigma_current,eps_current,'
+        'sigma_old,eps_old,cosine,'
+        'linearCKA,non-linearCKA,kernelCKA,bwt,'
+        'accuracy_current\n'
+    )
+    
+    write_header = (
+        not os.path.isfile(output_file)
+        or os.path.getsize(output_file) == 0
+    )
+    
+    with open(output_file, 'a') as f:   # <-- 'a' thay vì 'w' để không xóa data cũ
+        if write_header:
+            f.write(header)
     num_blocks = 5
 
     for client_id in range(1):
@@ -1266,11 +1276,7 @@ def measure_follow_training(args):
                     f"cosine={cosine_neuron:.4f}"
                 )
                 round_global += 1
-                # ── Append neuron vector vào file ───────────────────────────
-                with open(output_file_neuron_heatmap, 'a') as f:
-                    vals = neuron_important_curr.detach().cpu().numpy()
-                    row  = f'{task},{round_idx},' + ','.join(map(str, vals))
-                    f.write(row + '\n')
+
                 logger.info(
                     f'  │  task={task} round_idx={round_idx} round_global={round_global} | '
                     f'acc_curr={acc_curr_on_curr*100:.2f}%  '
@@ -1355,11 +1361,15 @@ def measure_follow_training(args):
 
                         # ── CSV ─────────────────────────────────────────────────
                         with open(output_file, 'a') as f:
+                            def to_val(x):
+                                import torch
+                                return x.item() if isinstance(x, torch.Tensor) else x
+
                             csv_row = [
                                 client_id, block_idx, task, round_idx, forgetting, acc_curr_on_old,
-                                sigma_on_curr_data, eps_on_curr_data, 
+                                sigma_on_curr_data, eps_on_curr_data,
                                 sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
-                                linear_cka, nl_cka, kernel_cka, bwt,
+                                to_val(linear_cka), to_val(nl_cka), to_val(kernel_cka), bwt,
                                 acc_curr_on_curr,
                             ]
                             f.write(','.join(map(str, csv_row)) + '\n')
