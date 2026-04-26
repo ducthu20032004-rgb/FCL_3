@@ -1028,11 +1028,11 @@ def measure_all_drift_follow_task_client_pair(args):
 def measure_follow_training(args):
 
     if args.kaggle == False:
-        root = 'outputs'
+        root = './outputs'
     else :
-        root = 'kaggle/working'
+        root = '/kaggle/working'
     output_file = (
-        f'./{root}/representation_drift_temporal_25_4'
+        f'{root}/representation_drift_temporal_25_4'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
@@ -1064,532 +1064,532 @@ def measure_follow_training(args):
             f.write(header)
     num_blocks = 5
 
-    for client_id in range(1):
-        logger.info('=' * 60)
-        logger.info(f'  CLIENT {client_id:>2} / {args.num_clients - 1}')
-        logger.info('=' * 60)
+    # for client_id in range(1):
+    #     logger.info('=' * 60)
+    #     logger.info(f'  CLIENT {client_id:>2} / {args.num_clients - 1}')
+    #     logger.info('=' * 60)
 
-        acc_matrix   = []
-        round_global = 0
-        client_class_order = all_class_orders[client_id][:10]
-        # ── TRƯỚC vòng for task — init bảng theo block ──────────────────────
-        if args.use_wandb:
-            block_tables = {
-                block_idx: {
-                    "table_eps":                  wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_sigma":                wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cka":                  wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_align":                wandb.Table(columns=["align150", "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cosine":               wandb.Table(columns=["cosine",   "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_eps_forgetting":       wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_sigma_forgetting":     wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cka_forgetting":       wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_align_forgetting":     wandb.Table(columns=["align150", "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cosine_forgetting":    wandb.Table(columns=["cosine",   "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_eps_old":              wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_sigma_old":            wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cka_old":              wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_eps_forgetting_old":   wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_sigma_forgetting_old": wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cka_forgetting_old":   wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_old_curr_eps_acc":     wandb.Table(columns=["epsilon",  "acc",        "type", "round"], log_mode="MUTABLE"),
-                    "table_old_curr_eps_fgt":     wandb.Table(columns=["epsilon",  "forgetting", "type", "round"], log_mode="MUTABLE"),
-                    "table_kernel_old":           wandb.Table(columns=["kernel_cka", "accuracy", "task"], log_mode="MUTABLE"),
-                    "table_nl_cka_old":           wandb.Table(columns=["nl_cka", "accuracy", "task"], log_mode="MUTABLE")
-                }
-                for block_idx in range(num_blocks)
-            }
-        for task in range(0, 5):
-            logger.info(f'  ── Task {task}')
+    #     acc_matrix   = []
+    #     round_global = 0
+    #     client_class_order = all_class_orders[client_id][:10]
+    #     # ── TRƯỚC vòng for task — init bảng theo block ──────────────────────
+    #     if args.use_wandb:
+    #         block_tables = {
+    #             block_idx: {
+    #                 "table_eps":                  wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_sigma":                wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_cka":                  wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_align":                wandb.Table(columns=["align150", "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_cosine":               wandb.Table(columns=["cosine",   "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_eps_forgetting":       wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_sigma_forgetting":     wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_cka_forgetting":       wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_align_forgetting":     wandb.Table(columns=["align150", "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_cosine_forgetting":    wandb.Table(columns=["cosine",   "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_eps_old":              wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_sigma_old":            wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_cka_old":              wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
+    #                 "table_eps_forgetting_old":   wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_sigma_forgetting_old": wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_cka_forgetting_old":   wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
+    #                 "table_old_curr_eps_acc":     wandb.Table(columns=["epsilon",  "acc",        "type", "round"], log_mode="MUTABLE"),
+    #                 "table_old_curr_eps_fgt":     wandb.Table(columns=["epsilon",  "forgetting", "type", "round"], log_mode="MUTABLE"),
+    #                 "table_kernel_old":           wandb.Table(columns=["kernel_cka", "accuracy", "task"], log_mode="MUTABLE"),
+    #                 "table_nl_cka_old":           wandb.Table(columns=["nl_cka", "accuracy", "task"], log_mode="MUTABLE")
+    #             }
+    #             for block_idx in range(num_blocks)
+    #         }
+    #     for task in range(0, 5):
+    #         logger.info(f'  ── Task {task}')
 
-            scatters = {
-                block_idx: ScatterLogger(
-                    f"23_Follow_training_logs/client_{client_id}/block{block_idx}/task_{task}"
-                )
-                for block_idx in range(num_blocks)
-            }
+    #         scatters = {
+    #             block_idx: ScatterLogger(
+    #                 f"23_Follow_training_logs/client_{client_id}/block{block_idx}/task_{task}"
+    #             )
+    #             for block_idx in range(num_blocks)
+    #         }
 
-            # Load old loaders 1 lần cho cả task
-            old_loaders = {}
-            for old_task in range(task):
-                test_data_old_task = read_client_data_FCL_cifar10(
-                    client_id, task=old_task,
-                    classes_per_task=args.cpt,
-                    count_labels=False, train=False,
-                )
-                old_loaders[old_task] = _make_loader(test_data_old_task)
+    #         # Load old loaders 1 lần cho cả task
+    #         old_loaders = {}
+    #         for old_task in range(task):
+    #             test_data_old_task = read_client_data_FCL_cifar10(
+    #                 client_id, task=old_task,
+    #                 classes_per_task=args.cpt,
+    #                 count_labels=False, train=False,
+    #             )
+    #             old_loaders[old_task] = _make_loader(test_data_old_task)
 
-            # ── Vòng round ──────────────────────────────────────────────────
-            for round_idx in range(25):
+    #         # ── Vòng round ──────────────────────────────────────────────────
+    #         for round_idx in range(25):
 
-                if round_idx == 0 and task == 0:
-                    logger.info(f'  │  [SKIP] task=0 round=0 — no previous checkpoint')
-                    continue
+    #             if round_idx == 0 and task == 0:
+    #                 logger.info(f'  │  [SKIP] task=0 round=0 — no previous checkpoint')
+    #                 continue
 
-                if round_idx == 0:
-                    ckpt_curr = get_model_path(args.saving_dir, client_id, task,     0)
-                    ckpt_prev = get_model_path(args.saving_dir, client_id, task - 1, 0)
-                    logger.info(
-                        f'  │  [cross-task] task={task} round=0 '
-                        f'← task={task-1} round=0 as baseline'
-                    )
-                else:
-                    ckpt_curr = get_model_path(args.saving_dir, client_id, task, round_idx)
-                    ckpt_prev = get_model_path(args.saving_dir, client_id, task, round_idx - 1)
-                if task > 0: 
-                    ckpt_prev_task = get_model_path(args.saving_dir,client_id,task -1, round_idx)
-                missing = [c for c in [ckpt_curr, ckpt_prev] if not os.path.isfile(c)]
-                if missing:
-                    for m in missing:
-                        logger.error(f'  │  [MISSING] {m}')
-                    continue
+    #             if round_idx == 0:
+    #                 ckpt_curr = get_model_path(args.saving_dir, client_id, task,     0)
+    #                 ckpt_prev = get_model_path(args.saving_dir, client_id, task - 1, 0)
+    #                 logger.info(
+    #                     f'  │  [cross-task] task={task} round=0 '
+    #                     f'← task={task-1} round=0 as baseline'
+    #                 )
+    #             else:
+    #                 ckpt_curr = get_model_path(args.saving_dir, client_id, task, round_idx)
+    #                 ckpt_prev = get_model_path(args.saving_dir, client_id, task, round_idx - 1)
+    #             if task > 0: 
+    #                 ckpt_prev_task = get_model_path(args.saving_dir,client_id,task -1, round_idx)
+    #             missing = [c for c in [ckpt_curr, ckpt_prev] if not os.path.isfile(c)]
+    #             if missing:
+    #                 for m in missing:
+    #                     logger.error(f'  │  [MISSING] {m}')
+    #                 continue
 
-                model_curr      = load_resnet18_from_checkpoint(ckpt_curr, load_head=False)
-                model_prev      = load_resnet18_from_checkpoint(ckpt_prev, load_head=False)
-                model_head_curr = load_model_with_head(ckpt_curr, num_classes=10)
-                model_head_prev = load_model_with_head(ckpt_prev, num_classes=10)
-                if task > 0:
-                    model_prev_task = load_resnet18_from_checkpoint(ckpt_prev_task,load_head=False)
-                logger.info(f'  │  model_curr ← {ckpt_curr}')
-                logger.info(f'  │  model_prev ← {ckpt_prev}')
+    #             model_curr      = load_resnet18_from_checkpoint(ckpt_curr, load_head=False)
+    #             model_prev      = load_resnet18_from_checkpoint(ckpt_prev, load_head=False)
+    #             model_head_curr = load_model_with_head(ckpt_curr, num_classes=10)
+    #             model_head_prev = load_model_with_head(ckpt_prev, num_classes=10)
+    #             if task > 0:
+    #                 model_prev_task = load_resnet18_from_checkpoint(ckpt_prev_task,load_head=False)
+    #             logger.info(f'  │  model_curr ← {ckpt_curr}')
+    #             logger.info(f'  │  model_prev ← {ckpt_prev}')
 
-                test_data_curr = read_client_data_FCL_cifar10(
-                    client_id, task=task, classes_per_task=args.cpt,
-                    count_labels=False, train=False
-                )
-                loader_curr = _make_loader(test_data_curr)
-                all_labels = []
-                for _, y in loader_curr:
-                    all_labels.append(y)
+    #             test_data_curr = read_client_data_FCL_cifar10(
+    #                 client_id, task=task, classes_per_task=args.cpt,
+    #                 count_labels=False, train=False
+    #             )
+    #             loader_curr = _make_loader(test_data_curr)
+    #             all_labels = []
+    #             for _, y in loader_curr:
+    #                 all_labels.append(y)
 
-                all_labels = torch.cat(all_labels)
+    #             all_labels = torch.cat(all_labels)
 
-                print("Unique labels:", torch.unique(all_labels))
-                has_old = task > 0
-                if has_old:
-                    test_data_old = read_client_data_FCL_cifar10(
-                        client_id, task=task - 1, classes_per_task=args.cpt,
-                        count_labels=False, train=False
-                    )
-                    loader_old = _make_loader(test_data_old)
-                    all_labels = []
+    #             print("Unique labels:", torch.unique(all_labels))
+    #             has_old = task > 0
+    #             if has_old:
+    #                 test_data_old = read_client_data_FCL_cifar10(
+    #                     client_id, task=task - 1, classes_per_task=args.cpt,
+    #                     count_labels=False, train=False
+    #                 )
+    #                 loader_old = _make_loader(test_data_old)
+    #                 all_labels = []
 
-                    # for _, y in loader_old:
-                    #     all_labels.append(y)
+    #                 # for _, y in loader_old:
+    #                 #     all_labels.append(y)
 
-                    # all_labels = torch.cat(all_labels)
+    #                 # all_labels = torch.cat(all_labels)
 
-                    # print("Unique labels:", torch.unique(all_labels))
+    #                 # print("Unique labels:", torch.unique(all_labels))
 
-                logits_curr_list, logits_prev_list = [], []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    logits_curr_list.append(model_head_curr(x).detach().cpu())
-                    logits_prev_list.append(model_head_prev(x).detach().cpu())
+    #             logits_curr_list, logits_prev_list = [], []
+    #             for x, _ in loader_curr:
+    #                 x = x.to(DEVICE)
+    #                 logits_curr_list.append(model_head_curr(x).detach().cpu())
+    #                 logits_prev_list.append(model_head_prev(x).detach().cpu())
 
-                logits_curr = torch.cat(logits_curr_list, dim=0)
-                logits_prev = torch.cat(logits_prev_list, dim=0)
-                cos_sim = torch.nn.functional.cosine_similarity(logits_curr, logits_prev, dim=1)
-                row = {}
-                acc_curr_on_curr = test_metrics(model_head_curr, loader_curr,
-                                        class_order=client_class_order,
-                                        task_index=task)
-                acc_curr_on_old  = test_metrics(model_head_curr, loader_old,
-                                                class_order=client_class_order,
-                                                task_index=task - 1) if has_old else float('nan')
-                row[task] = acc_curr_on_curr
+    #             logits_curr = torch.cat(logits_curr_list, dim=0)
+    #             logits_prev = torch.cat(logits_prev_list, dim=0)
+    #             cos_sim = torch.nn.functional.cosine_similarity(logits_curr, logits_prev, dim=1)
+    #             row = {}
+    #             acc_curr_on_curr = test_metrics(model_head_curr, loader_curr,
+    #                                     class_order=client_class_order,
+    #                                     task_index=task)
+    #             acc_curr_on_old  = test_metrics(model_head_curr, loader_old,
+    #                                             class_order=client_class_order,
+    #                                             task_index=task - 1) if has_old else float('nan')
+    #             row[task] = acc_curr_on_curr
 
-                if has_old:
-                    for old_task, old_loader in old_loaders.items():
-                        row[old_task] = test_metrics(model_head_curr, old_loader,
-                                                     class_order=client_class_order,
-                                                     task_index=old_task)
+    #             if has_old:
+    #                 for old_task, old_loader in old_loaders.items():
+    #                     row[old_task] = test_metrics(model_head_curr, old_loader,
+    #                                                  class_order=client_class_order,
+    #                                                  task_index=old_task)
 
-                acc_matrix.append(row)
-                forgetting = compute_forgetting(acc_matrix=acc_matrix, current_task=task)
-                bwt = compute_bwt(accuracy_matrix=acc_matrix,task=task)
-                preds = []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    pred = model_head_curr(x).argmax(1)
-                    preds.append(pred.cpu())
+    #             acc_matrix.append(row)
+    #             forgetting = compute_forgetting(acc_matrix=acc_matrix, current_task=task)
+    #             bwt = compute_bwt(accuracy_matrix=acc_matrix,task=task)
+    #             preds = []
+    #             for x, _ in loader_curr:
+    #                 x = x.to(DEVICE)
+    #                 pred = model_head_curr(x).argmax(1)
+    #                 preds.append(pred.cpu())
 
-                preds = torch.cat(preds)
-                #print(f"Range predict curr : {preds.min()}, {preds.max()}")
-                preds = []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    pred = model_head_prev(x).argmax(1)
-                    preds.append(pred.cpu())
+    #             preds = torch.cat(preds)
+    #             #print(f"Range predict curr : {preds.min()}, {preds.max()}")
+    #             preds = []
+    #             for x, _ in loader_curr:
+    #                 x = x.to(DEVICE)
+    #                 pred = model_head_prev(x).argmax(1)
+    #                 preds.append(pred.cpu())
 
-                preds = torch.cat(preds)
-                #print(f"Range predict old : {preds.min()}, {preds.max()}")
-                # pred_old = model_head_prev(loader_old).argmax(1)
-                # print(f"Range predict old : {pred_old.min()} , {pred_old.max()}") 
-                #fwt = compute_fwt(accuracy_matrix=acc_matrix,task=task,random_baseline=None)
-                                # Grad-CAM
-                target_layer_curr = [model_curr.layer4[-1]]
-                model_with_grad_cam_curr = BaseCAM(model_curr, target_layer_curr)
-                neuron_important_curr = model_with_grad_cam_curr.get_importance(loader_old,target_layer_curr) if has_old else model_with_grad_cam_curr.get_importance(loader_curr,target_layer_curr)
+    #             preds = torch.cat(preds)
+    #             #print(f"Range predict old : {preds.min()}, {preds.max()}")
+    #             # pred_old = model_head_prev(loader_old).argmax(1)
+    #             # print(f"Range predict old : {pred_old.min()} , {pred_old.max()}") 
+    #             #fwt = compute_fwt(accuracy_matrix=acc_matrix,task=task,random_baseline=None)
+    #                             # Grad-CAM
+    #             target_layer_curr = [model_curr.layer4[-1]]
+    #             model_with_grad_cam_curr = BaseCAM(model_curr, target_layer_curr)
+    #             neuron_important_curr = model_with_grad_cam_curr.get_importance(loader_old,target_layer_curr) if has_old else model_with_grad_cam_curr.get_importance(loader_curr,target_layer_curr)
 
-                if has_old:
-                    target_layer_prev = [model_prev_task.layer4[-1]]
-                    model_with_grad_cam_prev = BaseCAM(model_prev_task, target_layer_prev)
-                    neuron_important_prev = model_with_grad_cam_prev.get_importance(loader_old,target_layer_prev)
+    #             if has_old:
+    #                 target_layer_prev = [model_prev_task.layer4[-1]]
+    #                 model_with_grad_cam_prev = BaseCAM(model_prev_task, target_layer_prev)
+    #                 neuron_important_prev = model_with_grad_cam_prev.get_importance(loader_old,target_layer_prev)
                    
-                    # ===== Drift =====
-                    drift_neuron = torch.norm(neuron_important_curr - neuron_important_prev)
+    #                 # ===== Drift =====
+    #                 drift_neuron = torch.norm(neuron_important_curr - neuron_important_prev)
 
-                    # ===== Range =====
-                    curr_min, curr_max = neuron_important_curr.min(), neuron_important_curr.max()
-                    prev_min, prev_max = neuron_important_prev.min(), neuron_important_prev.max()
+    #                 # ===== Range =====
+    #                 curr_min, curr_max = neuron_important_curr.min(), neuron_important_curr.max()
+    #                 prev_min, prev_max = neuron_important_prev.min(), neuron_important_prev.max()
 
-                    # ===== Top-k =====
-                    k_top = 50
-                    top_curr = torch.topk(neuron_important_curr, k_top).indices
-                    top_prev = torch.topk(neuron_important_prev, k_top).indices
+    #                 # ===== Top-k =====
+    #                 k_top = 50
+    #                 top_curr = torch.topk(neuron_important_curr, k_top).indices
+    #                 top_prev = torch.topk(neuron_important_prev, k_top).indices
 
-                    # ===== Overlap =====
-                    overlap = len(set(top_curr.tolist()) & set(top_prev.tolist())) / k_top
+    #                 # ===== Overlap =====
+    #                 overlap = len(set(top_curr.tolist()) & set(top_prev.tolist())) / k_top
 
-                    # ===== Cosine similarity (rất nên có) =====
-                    cosine_neuron = torch.nn.functional.cosine_similarity(
-                        neuron_important_curr.unsqueeze(0),
-                        neuron_important_prev.unsqueeze(0)
-                    ).item()
+    #                 # ===== Cosine similarity (rất nên có) =====
+    #                 cosine_neuron = torch.nn.functional.cosine_similarity(
+    #                     neuron_important_curr.unsqueeze(0),
+    #                     neuron_important_prev.unsqueeze(0)
+    #                 ).item()
 
-                else:
-                    neuron_important_prev = torch.tensor(float('nan'))
-                    drift_neuron = torch.tensor(float('nan'))
-                    curr_min, curr_max = neuron_important_curr.min(), neuron_important_curr.max()
-                    prev_min, prev_max = float('nan'), float('nan')
-                    overlap = float('nan')
-                    cosine_neuron = float('nan')
+    #             else:
+    #                 neuron_important_prev = torch.tensor(float('nan'))
+    #                 drift_neuron = torch.tensor(float('nan'))
+    #                 curr_min, curr_max = neuron_important_curr.min(), neuron_important_curr.max()
+    #                 prev_min, prev_max = float('nan'), float('nan')
+    #                 overlap = float('nan')
+    #                 cosine_neuron = float('nan')
 
-                # ===== Log =====
-                logger.info(
-                    #f"Neurun curr : {neuron_important_curr}\n Neuron prev : {neuron_important_prev}\n"
-                    f"Neuron drift={drift_neuron:.4f} | "
-                    f"curr_range=({curr_min:.4f},{curr_max:.4f}) | "
-                    f"prev_range=({prev_min:.4f},{prev_max:.4f}) | "
-                    f"overlap@50={overlap:.4f} | "
-                    f"cosine={cosine_neuron:.4f}"
-                )
-                round_global += 1
+    #             # ===== Log =====
+    #             logger.info(
+    #                 #f"Neurun curr : {neuron_important_curr}\n Neuron prev : {neuron_important_prev}\n"
+    #                 f"Neuron drift={drift_neuron:.4f} | "
+    #                 f"curr_range=({curr_min:.4f},{curr_max:.4f}) | "
+    #                 f"prev_range=({prev_min:.4f},{prev_max:.4f}) | "
+    #                 f"overlap@50={overlap:.4f} | "
+    #                 f"cosine={cosine_neuron:.4f}"
+    #             )
+    #             round_global += 1
 
-                logger.info(
-                    f'  │  task={task} round_idx={round_idx} round_global={round_global} | '
-                    f'acc_curr={acc_curr_on_curr*100:.2f}%  '
-                    f'FM={ f"{forgetting*100:.2f}%" if forgetting == forgetting else "N/A" }'
-                )
-                scalar_log = {}
-                double_log = {}
-                # ── Per-block metrics ────────────────────────────────────────
-                for block_idx in range(num_blocks):
-                    target_layer = f'block{block_idx}'
-                    scatter      = scatters[block_idx]
+    #             logger.info(
+    #                 f'  │  task={task} round_idx={round_idx} round_global={round_global} | '
+    #                 f'acc_curr={acc_curr_on_curr*100:.2f}%  '
+    #                 f'FM={ f"{forgetting*100:.2f}%" if forgetting == forgetting else "N/A" }'
+    #             )
+    #             scalar_log = {}
+    #             double_log = {}
+    #             # ── Per-block metrics ────────────────────────────────────────
+    #             for block_idx in range(num_blocks):
+    #                 target_layer = f'block{block_idx}'
+    #                 scatter      = scatters[block_idx]
 
-                    try:
-                        # ── Features trên current task data (luôn có) ──────────
-                        feat_curr_on_curr_data       = compute_feature_resnet18(model_curr, task, test_data_curr, target_layer, args.seed, args)
-                        feat_prev_round_on_curr_data = compute_feature_resnet18(model_prev, task, test_data_curr, target_layer, args.seed, args)
+    #                 try:
+    #                     # ── Features trên current task data (luôn có) ──────────
+    #                     feat_curr_on_curr_data       = compute_feature_resnet18(model_curr, task, test_data_curr, target_layer, args.seed, args)
+    #                     feat_prev_round_on_curr_data = compute_feature_resnet18(model_prev, task, test_data_curr, target_layer, args.seed, args)
 
-                        width_curr = compute_width(model_curr, block_idx - 1) if block_idx > 0 else float('nan')
-                        width_prev = compute_width(model_prev, block_idx - 1) if block_idx > 0 else float('nan')
+    #                     width_curr = compute_width(model_curr, block_idx - 1) if block_idx > 0 else float('nan')
+    #                     width_prev = compute_width(model_prev, block_idx - 1) if block_idx > 0 else float('nan')
 
-                        eta_min_on_curr_data, eta_max_on_curr_data, eta_min_n, eta_max_n = compute_eta(feat_curr_on_curr_data)
-                        sigma_on_curr_data = compute_sigma(feat_curr_on_curr_data, feat_prev_round_on_curr_data)
-                        eps_on_curr_data   = compute_eps(feat_curr_on_curr_data,   feat_prev_round_on_curr_data)
-                        _, cka_on_curr_data = compute_cka(feat_curr_on_curr_data,  feat_prev_round_on_curr_data)
-                        ratio_feat = eta_max_on_curr_data / eta_min_on_curr_data if eta_min_on_curr_data > 0 else float('nan')
+    #                     eta_min_on_curr_data, eta_max_on_curr_data, eta_min_n, eta_max_n = compute_eta(feat_curr_on_curr_data)
+    #                     sigma_on_curr_data = compute_sigma(feat_curr_on_curr_data, feat_prev_round_on_curr_data)
+    #                     eps_on_curr_data   = compute_eps(feat_curr_on_curr_data,   feat_prev_round_on_curr_data)
+    #                     _, cka_on_curr_data = compute_cka(feat_curr_on_curr_data,  feat_prev_round_on_curr_data)
+    #                     ratio_feat = eta_max_on_curr_data / eta_min_on_curr_data if eta_min_on_curr_data > 0 else float('nan')
 
-                        align_score_on_curr_data = {}
-                        for k in [20, 100, 150]:
-                            align_score_on_curr_data[k], _ = compute_alignment_from_arrays(
-                                feat_curr_on_curr_data, feat_prev_round_on_curr_data, "mutual_knn", topk=k, precise=True
-                            )
+    #                     align_score_on_curr_data = {}
+    #                     for k in [20, 100, 150]:
+    #                         align_score_on_curr_data[k], _ = compute_alignment_from_arrays(
+    #                             feat_curr_on_curr_data, feat_prev_round_on_curr_data, "mutual_knn", topk=k, precise=True
+    #                         )
 
-                        # ── Metrics trên old task data (chỉ khi has_old) ───────
-                        NAN = float('nan')
-                        sigma_on_old_data  = NAN
-                        eps_on_old_data    = NAN
-                        cka_on_old_data    = NAN
-                        linear_cka         = NAN
-                        kernel_cka         = NAN
-                        nl_cka             = NAN
-                        align_score_on_old_data = {}
-                        align_old_150      = NAN
+    #                     # ── Metrics trên old task data (chỉ khi has_old) ───────
+    #                     NAN = float('nan')
+    #                     sigma_on_old_data  = NAN
+    #                     eps_on_old_data    = NAN
+    #                     cka_on_old_data    = NAN
+    #                     linear_cka         = NAN
+    #                     kernel_cka         = NAN
+    #                     nl_cka             = NAN
+    #                     align_score_on_old_data = {}
+    #                     align_old_150      = NAN
 
-                        if has_old:
-                            feat_curr_on_old_data = compute_feature_resnet18(model_curr, task, test_data_old, target_layer, args.seed, args)
-                            feat_prev_on_old_data = compute_feature_resnet18(model_prev, task, test_data_old, target_layer, args.seed, args)
+    #                     if has_old:
+    #                         feat_curr_on_old_data = compute_feature_resnet18(model_curr, task, test_data_old, target_layer, args.seed, args)
+    #                         feat_prev_on_old_data = compute_feature_resnet18(model_prev, task, test_data_old, target_layer, args.seed, args)
 
-                            sigma_on_old_data  = compute_sigma(feat_curr_on_old_data, feat_prev_on_old_data)
-                            eps_on_old_data    = compute_eps(feat_curr_on_old_data,   feat_prev_on_old_data)
-                            _, cka_on_old_data = compute_cka(feat_curr_on_old_data,   feat_prev_on_old_data)
+    #                         sigma_on_old_data  = compute_sigma(feat_curr_on_old_data, feat_prev_on_old_data)
+    #                         eps_on_old_data    = compute_eps(feat_curr_on_old_data,   feat_prev_on_old_data)
+    #                         _, cka_on_old_data = compute_cka(feat_curr_on_old_data,   feat_prev_on_old_data)
 
-                            feat_curr_t = torch.from_numpy(feat_curr_on_old_data).float().to(DEVICE)
-                            feat_prev_t = torch.from_numpy(feat_prev_on_old_data).float().to(DEVICE)
-                            cka_obj    = TorchCKA(device=DEVICE)
-                            linear_cka = cka_obj.linear_CKA(feat_curr_t, feat_prev_t)
-                            kernel_cka = cka_obj.kernel_CKA(feat_curr_t, feat_prev_t, sigma=None)
-                            nl_cka     = kernel_cka - linear_cka
+    #                         feat_curr_t = torch.from_numpy(feat_curr_on_old_data).float().to(DEVICE)
+    #                         feat_prev_t = torch.from_numpy(feat_prev_on_old_data).float().to(DEVICE)
+    #                         cka_obj    = TorchCKA(device=DEVICE)
+    #                         linear_cka = cka_obj.linear_CKA(feat_curr_t, feat_prev_t)
+    #                         kernel_cka = cka_obj.kernel_CKA(feat_curr_t, feat_prev_t, sigma=None)
+    #                         nl_cka     = kernel_cka - linear_cka
 
-                            for k in [20, 100, 150]:
-                                align_score_on_old_data[k], _ = compute_alignment_from_arrays(
-                                    feat_curr_on_old_data, feat_prev_on_old_data, "mutual_knn", topk=k, precise=True
-                                )
-                            align_old_150 = align_score_on_old_data.get(150, NAN)
+    #                         for k in [20, 100, 150]:
+    #                             align_score_on_old_data[k], _ = compute_alignment_from_arrays(
+    #                                 feat_curr_on_old_data, feat_prev_on_old_data, "mutual_knn", topk=k, precise=True
+    #                             )
+    #                         align_old_150 = align_score_on_old_data.get(150, NAN)
 
-                        # ── Log ────────────────────────────────────────────────
-                        def _fmt(v):
-                            return f'{v:.4f}' if v == v else 'nan'
+    #                     # ── Log ────────────────────────────────────────────────
+    #                     def _fmt(v):
+    #                         return f'{v:.4f}' if v == v else 'nan'
 
-                        logger.info(
-                            f'  │  [{block_idx+1}/{num_blocks}] {target_layer} | '
-                            f'FM={_fmt(forgetting*100)}% '
-                            f'bwt={bwt}, '
-                            f'cosine={cos_sim.mean().item():.4f}  '
-                            f'σ_curr={sigma_on_curr_data:.4f}  ε_curr={eps_on_curr_data:.4f}  '
-                            f'σ_old={_fmt(sigma_on_old_data)}  ε_old={_fmt(eps_on_old_data)}  '
-                            f'linCKA={_fmt(linear_cka)}  nlCKA={_fmt(nl_cka)}  kCKA={_fmt(kernel_cka)}  '
-                            f'dim={_fmt(ratio_feat)}  '
-                            f'align@150_old={_fmt(align_old_150)}  '
-                            f'ACC_curr={acc_curr_on_curr*100:.2f}%  '
-                            f'ACC_old={_fmt(acc_curr_on_old*100) if has_old else "N/A"}  '
-                        )
+    #                     logger.info(
+    #                         f'  │  [{block_idx+1}/{num_blocks}] {target_layer} | '
+    #                         f'FM={_fmt(forgetting*100)}% '
+    #                         f'bwt={bwt}, '
+    #                         f'cosine={cos_sim.mean().item():.4f}  '
+    #                         f'σ_curr={sigma_on_curr_data:.4f}  ε_curr={eps_on_curr_data:.4f}  '
+    #                         f'σ_old={_fmt(sigma_on_old_data)}  ε_old={_fmt(eps_on_old_data)}  '
+    #                         f'linCKA={_fmt(linear_cka)}  nlCKA={_fmt(nl_cka)}  kCKA={_fmt(kernel_cka)}  '
+    #                         f'dim={_fmt(ratio_feat)}  '
+    #                         f'align@150_old={_fmt(align_old_150)}  '
+    #                         f'ACC_curr={acc_curr_on_curr*100:.2f}%  '
+    #                         f'ACC_old={_fmt(acc_curr_on_old*100) if has_old else "N/A"}  '
+    #                     )
 
-                        # ── CSV ─────────────────────────────────────────────────
-                        with open(output_file, 'a') as f:
-                            def to_val(x):
-                                import torch
-                                return x.item() if isinstance(x, torch.Tensor) else x
+    #                     # ── CSV ─────────────────────────────────────────────────
+    #                     with open(output_file, 'a') as f:
+    #                         def to_val(x):
+    #                             import torch
+    #                             return x.item() if isinstance(x, torch.Tensor) else x
 
-                            csv_row = [
-                                client_id, block_idx, task, round_idx, forgetting, acc_curr_on_old,
-                                sigma_on_curr_data, eps_on_curr_data,
-                                sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
-                                to_val(linear_cka), to_val(nl_cka), to_val(kernel_cka), bwt,
-                                acc_curr_on_curr,
-                            ]
-                            f.write(','.join(map(str, csv_row)) + '\n')
+    #                         csv_row = [
+    #                             client_id, block_idx, task, round_idx, forgetting, acc_curr_on_old,
+    #                             sigma_on_curr_data, eps_on_curr_data,
+    #                             sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
+    #                             to_val(linear_cka), to_val(nl_cka), to_val(kernel_cka), bwt,
+    #                             acc_curr_on_curr,
+    #                         ]
+    #                         f.write(','.join(map(str, csv_row)) + '\n')
 
-                    except Exception as e:
-                        logger.error(
-                            f'  │  [SKIP] client={client_id} {target_layer} '
-                            f'task={task} round={round_idx} | {e}'
-                        )
-                        import traceback
-                        logger.debug(traceback.format_exc())   # thêm dòng này để debug dễ hơn
-                        continue
+    #                 except Exception as e:
+    #                     logger.error(
+    #                         f'  │  [SKIP] client={client_id} {target_layer} '
+    #                         f'task={task} round={round_idx} | {e}'
+    #                     )
+    #                     import traceback
+    #                     logger.debug(traceback.format_exc())   # thêm dòng này để debug dễ hơn
+    #                     continue
 
-                    # ── Scalar logs (mỗi round) ──────────────────────────────
-                    if args.use_wandb:
-                        forgetting_pct = forgetting * 100 if forgetting == forgetting else float('nan')
-
-
-                        # ① Đặt ở đầu hàm measure_follow_training, NGOÀI vòng lặp
-                        records_3d = []
-
-                        # ② Trong vòng lặp, thay vì plot ngay, chỉ append:
-                        records_3d.append({
-                            "global_round": round_global,      # int
-                            "old_task": eps_on_old_data,       # int (task id cũ)
-                            "acc_old_curr": acc_curr_on_old,   # float
-                        })
+    #                 # ── Scalar logs (mỗi round) ──────────────────────────────
+    #                 if args.use_wandb:
+    #                     forgetting_pct = forgetting * 100 if forgetting == forgetting else float('nan')
 
 
+    #                     # ① Đặt ở đầu hàm measure_follow_training, NGOÀI vòng lặp
+    #                     records_3d = []
 
-                        df3d = pd.DataFrame(records_3d)
+    #                     # ② Trong vòng lặp, thay vì plot ngay, chỉ append:
+    #                     records_3d.append({
+    #                         "global_round": round_global,      # int
+    #                         "old_task": eps_on_old_data,       # int (task id cũ)
+    #                         "acc_old_curr": acc_curr_on_old,   # float
+    #                     })
 
-                        # Vẽ từng old_task một màu riêng
-                        fig = go.Figure()
-                        for old_task_id in sorted(df3d["old_task"].unique()):
-                            sub = df3d[df3d["old_task"] == old_task_id]
-                            fig.add_trace(go.Scatter3d(
-                                x=sub["global_round"].tolist(),
-                                y=sub["old_task"].tolist(),
-                                z=sub["acc_old_curr"].tolist(),
-                                mode='lines+markers',
-                                marker=dict(size=3),
-                                name=f"old_task={old_task_id}"
-                            ))
 
-                        fig.update_layout(
-                            scene=dict(
-                                xaxis_title="Global Round",
-                                yaxis_title="Old Task ID",
-                                zaxis_title="Acc Old Curr (%)"
-                            ),
-                            title="3D: Acc Old theo Global Round & Task"
-                        )
 
-                        wandb.log({"3d_acc_old": wandb.Html(fig.to_html())})
-                        scalar_log.update({
-                            f"block{block_idx}/task{task}/cosine_similarity":  cos_sim.mean().item(),
-                            f"block{block_idx}/task{task}/sigma_on_curr_data": sigma_on_curr_data,
-                            f"block{block_idx}/task{task}/eps_on_curr_data":   eps_on_curr_data,
-                            f"block{block_idx}/task{task}/cka_on_curr_data":   cka_on_curr_data,
-                            f"block{block_idx}/task{task}/sigma_on_old_data":  sigma_on_old_data,
-                            f"block{block_idx}/task{task}/eps_on_old_data":    eps_on_old_data,
-                            f"block{block_idx}/task{task}/cka_on_old_data":    cka_on_old_data,
-                            f"block{block_idx}/task{task}/linear_cka":         linear_cka,
-                            f"block{block_idx}/task{task}/nl_cka":             nl_cka,
-                            f"block{block_idx}/task{task}/kernel_cka":         kernel_cka,
-                            f"block{block_idx}/task{task}/align20":            align_score_on_curr_data[20],
-                            f"block{block_idx}/task{task}/align100":           align_score_on_curr_data[100],
-                            f"block{block_idx}/task{task}/align150":           align_score_on_curr_data[150],
-                            f"block{block_idx}/task{task}/ratio_feature":      ratio_feat,
-                            f"block{block_idx}/task{task}/acc_curr":           acc_curr_on_curr * 100,
-                            f"block{block_idx}/task{task}/acc_old":            acc_curr_on_old * 100 if has_old else float('nan'),
-                            f"block{block_idx}/task{task}/forgetting":         forgetting_pct,
-                            f"block{block_idx}/task{task}/neuron_curr_min":    curr_min,
-                            f"block{block_idx}/task{task}/neuron_curr_max":    curr_max,
-                            f"block{block_idx}/task{task}/neuron_prev_min":     prev_min,
-                            f"block{block_idx}/task{task}/neuron_prev_max":     prev_max,
-                            f"block{block_idx}/task{task}/overlap@20":    overlap,
-                            f"block{block_idx}/task{task}/cosine_neuron":      cosine_neuron,     
-                        }, step=round_global)
+    #                     df3d = pd.DataFrame(records_3d)
 
-                        double_log.update({
-                            f"double/block{block_idx}/task{task}/sigma/curr": sigma_on_curr_data,
-                            f"double/block{block_idx}/task{task}/sigma/old":  sigma_on_old_data if has_old else None,
-                            f"double/block{block_idx}/task{task}/eps/curr":   eps_on_curr_data,
-                            f"double/block{block_idx}/task{task}/eps/old":    eps_on_old_data   if has_old else None,
-                            f"double/block{block_idx}/task{task}/cka/curr":   cka_on_curr_data,
-                            f"double/block{block_idx}/task{task}/cka/old":    cka_on_old_data   if has_old else None,
-                            f"block{block_idx}/task{task}/curr/neuron_curr_min": curr_min,
-                            f"block{block_idx}/task{task}/curr/neuron_curr_max": curr_max,
-                            f"block{block_idx}/task{task}/prev/neuron_prev_min": prev_min if has_old else None,
-                            f"block{block_idx}/task{task}/prev/neuron_prev_max": prev_max if has_old else None,
-                        }, step=round_global)
+    #                     # Vẽ từng old_task một màu riêng
+    #                     fig = go.Figure()
+    #                     for old_task_id in sorted(df3d["old_task"].unique()):
+    #                         sub = df3d[df3d["old_task"] == old_task_id]
+    #                         fig.add_trace(go.Scatter3d(
+    #                             x=sub["global_round"].tolist(),
+    #                             y=sub["old_task"].tolist(),
+    #                             z=sub["acc_old_curr"].tolist(),
+    #                             mode='lines+markers',
+    #                             marker=dict(size=3),
+    #                             name=f"old_task={old_task_id}"
+    #                         ))
 
-                        # ── Tích lũy data vào bảng (chưa log scatter) ───────
-                        acc_curr_pct = acc_curr_on_curr * 100
+    #                     fig.update_layout(
+    #                         scene=dict(
+    #                             xaxis_title="Global Round",
+    #                             yaxis_title="Old Task ID",
+    #                             zaxis_title="Acc Old Curr (%)"
+    #                         ),
+    #                         title="3D: Acc Old theo Global Round & Task"
+    #                     )
 
-                        if args.use_wandb:
-                            bt = block_tables[block_idx]   # lấy bảng của đúng block
-                            acc_curr_pct   = acc_curr_on_curr * 100
-                            forgetting_pct = forgetting * 100 if forgetting == forgetting else float('nan')
+    #                     wandb.log({"3d_acc_old": wandb.Html(fig.to_html())})
+    #                     scalar_log.update({
+    #                         f"block{block_idx}/task{task}/cosine_similarity":  cos_sim.mean().item(),
+    #                         f"block{block_idx}/task{task}/sigma_on_curr_data": sigma_on_curr_data,
+    #                         f"block{block_idx}/task{task}/eps_on_curr_data":   eps_on_curr_data,
+    #                         f"block{block_idx}/task{task}/cka_on_curr_data":   cka_on_curr_data,
+    #                         f"block{block_idx}/task{task}/sigma_on_old_data":  sigma_on_old_data,
+    #                         f"block{block_idx}/task{task}/eps_on_old_data":    eps_on_old_data,
+    #                         f"block{block_idx}/task{task}/cka_on_old_data":    cka_on_old_data,
+    #                         f"block{block_idx}/task{task}/linear_cka":         linear_cka,
+    #                         f"block{block_idx}/task{task}/nl_cka":             nl_cka,
+    #                         f"block{block_idx}/task{task}/kernel_cka":         kernel_cka,
+    #                         f"block{block_idx}/task{task}/align20":            align_score_on_curr_data[20],
+    #                         f"block{block_idx}/task{task}/align100":           align_score_on_curr_data[100],
+    #                         f"block{block_idx}/task{task}/align150":           align_score_on_curr_data[150],
+    #                         f"block{block_idx}/task{task}/ratio_feature":      ratio_feat,
+    #                         f"block{block_idx}/task{task}/acc_curr":           acc_curr_on_curr * 100,
+    #                         f"block{block_idx}/task{task}/acc_old":            acc_curr_on_old * 100 if has_old else float('nan'),
+    #                         f"block{block_idx}/task{task}/forgetting":         forgetting_pct,
+    #                         f"block{block_idx}/task{task}/neuron_curr_min":    curr_min,
+    #                         f"block{block_idx}/task{task}/neuron_curr_max":    curr_max,
+    #                         f"block{block_idx}/task{task}/neuron_prev_min":     prev_min,
+    #                         f"block{block_idx}/task{task}/neuron_prev_max":     prev_max,
+    #                         f"block{block_idx}/task{task}/overlap@20":    overlap,
+    #                         f"block{block_idx}/task{task}/cosine_neuron":      cosine_neuron,     
+    #                     }, step=round_global)
 
-                            bt["table_eps"].add_data(              eps_on_curr_data,              acc_curr_pct,   f"task_{task}")
-                            bt["table_sigma"].add_data(            sigma_on_curr_data,            acc_curr_pct,   f"task_{task}")
-                            bt["table_cka"].add_data(              cka_on_curr_data,              acc_curr_pct,   f"task_{task}")
-                            bt["table_align"].add_data(            align_score_on_curr_data[150], acc_curr_pct,   f"task_{task}")
-                            bt["table_cosine"].add_data(           cos_sim.mean().item(),         acc_curr_pct,   f"task_{task}")
-                            bt["table_eps_forgetting"].add_data(   eps_on_curr_data,              forgetting_pct, f"task_{task}")
-                            bt["table_sigma_forgetting"].add_data( sigma_on_curr_data,            forgetting_pct, f"task_{task}")
-                            bt["table_cka_forgetting"].add_data(   cka_on_curr_data,              forgetting_pct, f"task_{task}")
-                            bt["table_align_forgetting"].add_data( align_score_on_curr_data[150], forgetting_pct, f"task_{task}")
-                            bt["table_cosine_forgetting"].add_data(cos_sim.mean().item(),         forgetting_pct, f"task_{task}")
+    #                     double_log.update({
+    #                         f"double/block{block_idx}/task{task}/sigma/curr": sigma_on_curr_data,
+    #                         f"double/block{block_idx}/task{task}/sigma/old":  sigma_on_old_data if has_old else None,
+    #                         f"double/block{block_idx}/task{task}/eps/curr":   eps_on_curr_data,
+    #                         f"double/block{block_idx}/task{task}/eps/old":    eps_on_old_data   if has_old else None,
+    #                         f"double/block{block_idx}/task{task}/cka/curr":   cka_on_curr_data,
+    #                         f"double/block{block_idx}/task{task}/cka/old":    cka_on_old_data   if has_old else None,
+    #                         f"block{block_idx}/task{task}/curr/neuron_curr_min": curr_min,
+    #                         f"block{block_idx}/task{task}/curr/neuron_curr_max": curr_max,
+    #                         f"block{block_idx}/task{task}/prev/neuron_prev_min": prev_min if has_old else None,
+    #                         f"block{block_idx}/task{task}/prev/neuron_prev_max": prev_max if has_old else None,
+    #                     }, step=round_global)
 
-                            if has_old:
-                                acc_old_pct = acc_curr_on_old * 100
-                                bt["table_eps_old"].add_data(           eps_on_old_data,   acc_old_pct,    f"task_{task}")
-                                bt["table_sigma_old"].add_data(         sigma_on_old_data, acc_old_pct,    f"task_{task}")
-                                bt["table_cka_old"].add_data(           cka_on_old_data,   acc_old_pct,    f"task_{task}")
-                                bt["table_eps_forgetting_old"].add_data(  eps_on_old_data,   forgetting_pct, f"task_{task}")
-                                bt["table_sigma_forgetting_old"].add_data(sigma_on_old_data, forgetting_pct, f"task_{task}")
-                                bt["table_cka_forgetting_old"].add_data(  cka_on_old_data,   forgetting_pct, f"task_{task}")
-                                bt["table_old_curr_eps_acc"].add_data(eps_on_old_data,  acc_old_pct,    "old",  round_global)
-                                bt["table_old_curr_eps_acc"].add_data(eps_on_curr_data, acc_curr_pct,   "curr", round_global)
-                                bt["table_old_curr_eps_fgt"].add_data(eps_on_old_data,  forgetting_pct, "old",  round_global)
-                                bt["table_old_curr_eps_fgt"].add_data(eps_on_curr_data, forgetting_pct, "curr", round_global)
-                                bt["table_kernel_old"].add_data(kernel_cka, acc_old_pct, f"task_{task}")
-                                bt["table_nl_cka_old"].add_data(nl_cka, acc_old_pct, f"task_{task}")
-                    if args.use_wandb and scalar_log:
-                        #print(f"DEbug Round{round_global} Round_idex = {round_idx} scalar_log_size{scalar_log.__sizeof__} double_log{double_log.__sizeof__}")
-                        wandb.log({**scalar_log,**double_log,"round_global": round_global})
+    #                     # ── Tích lũy data vào bảng (chưa log scatter) ───────
+    #                     acc_curr_pct = acc_curr_on_curr * 100
 
-            # ================================================================
-            # SAU KHI XONG 25 ROUND → log scatter 1 lần cho cả task
-            # ================================================================
-            # ── SAU vòng for task — log scatter tất cả block ────────────────────
-            if args.use_wandb:
-                for block_idx in range(num_blocks):
-                    bt = block_tables[block_idx]
-                    wandb.log({
-                        "round_global": round_global,
-                        # ===== CURR DATA =====
-                        f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Accuracy_curr": wandb.plot.scatter(
-                            bt["table_eps"],   "epsilon",  "accuracy",
-                            title=f"[Curr] Epsilon vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Accuracy_curr": wandb.plot.scatter(
-                            bt["table_sigma"], "sigma",    "accuracy",
-                            title=f"[Curr] Sigma vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Accuracy_curr": wandb.plot.scatter(
-                            bt["table_cka"],   "cka",      "accuracy",
-                            title=f"[Curr] CKA vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Align150_vs_Accuracy_curr": wandb.plot.scatter(
-                            bt["table_align"], "align150", "accuracy",
-                            title=f"[Curr] Align150 vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Cosine_vs_Accuracy_curr": wandb.plot.scatter(
-                            bt["table_cosine"],"cosine",   "accuracy",
-                            title=f"[Curr] Cosine vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Forgetting_curr": wandb.plot.scatter(
-                            bt["table_eps_forgetting"],    "epsilon",  "forgetting",
-                            title=f"[Curr] Epsilon vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Forgetting_curr": wandb.plot.scatter(
-                            bt["table_sigma_forgetting"],  "sigma",    "forgetting",
-                            title=f"[Curr] Sigma vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Forgetting_curr": wandb.plot.scatter(
-                            bt["table_cka_forgetting"],    "cka",      "forgetting",
-                            title=f"[Curr] CKA vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Align150_vs_Forgetting_curr": wandb.plot.scatter(
-                            bt["table_align_forgetting"],  "align150", "forgetting",
-                            title=f"[Curr] Align150 vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Cosine_vs_Forgetting_curr": wandb.plot.scatter(
-                            bt["table_cosine_forgetting"], "cosine",   "forgetting",
-                            title=f"[Curr] Cosine vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
+    #                     if args.use_wandb:
+    #                         bt = block_tables[block_idx]   # lấy bảng của đúng block
+    #                         acc_curr_pct   = acc_curr_on_curr * 100
+    #                         forgetting_pct = forgetting * 100 if forgetting == forgetting else float('nan')
 
-                        # ===== OLD DATA =====
-                        f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Accuracy_old": wandb.plot.scatter(
-                            bt["table_eps_old"],              "epsilon", "accuracy",
-                            title=f"[Old] Epsilon vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Accuracy_old": wandb.plot.scatter(
-                            bt["table_sigma_old"],            "sigma",   "accuracy",
-                            title=f"[Old] Sigma vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Accuracy_old": wandb.plot.scatter(
-                            bt["table_cka_old"],              "cka",     "accuracy",
-                            title=f"[Old] CKA vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Kernel_vs_Accuracy_old": wandb.plot.scatter(
-                            bt["table_kernel_old"],           "kernel",  "accuracy",
-                            title=f"[Old] Kernel vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/NL_CKA_vs_Accuracy_old": wandb.plot.scatter(
-                            bt["table_nl_cka_old"],           "nl_cka",  "accuracy",
-                            title=f"[Old] NL_CKA vs Accuracy | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Forgetting_old": wandb.plot.scatter(
-                            bt["table_eps_forgetting_old"],   "epsilon", "forgetting",
-                            title=f"[Old] Epsilon vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Forgetting_old": wandb.plot.scatter(
-                            bt["table_sigma_forgetting_old"], "sigma",   "forgetting",
-                            title=f"[Old] Sigma vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                        f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Forgetting_old": wandb.plot.scatter(
-                            bt["table_cka_forgetting_old"],   "cka",     "forgetting",
-                            title=f"[Old] CKA vs Forgetting | Block{block_idx} — Task{task}"
-                        ),
-                    })
+    #                         bt["table_eps"].add_data(              eps_on_curr_data,              acc_curr_pct,   f"task_{task}")
+    #                         bt["table_sigma"].add_data(            sigma_on_curr_data,            acc_curr_pct,   f"task_{task}")
+    #                         bt["table_cka"].add_data(              cka_on_curr_data,              acc_curr_pct,   f"task_{task}")
+    #                         bt["table_align"].add_data(            align_score_on_curr_data[150], acc_curr_pct,   f"task_{task}")
+    #                         bt["table_cosine"].add_data(           cos_sim.mean().item(),         acc_curr_pct,   f"task_{task}")
+    #                         bt["table_eps_forgetting"].add_data(   eps_on_curr_data,              forgetting_pct, f"task_{task}")
+    #                         bt["table_sigma_forgetting"].add_data( sigma_on_curr_data,            forgetting_pct, f"task_{task}")
+    #                         bt["table_cka_forgetting"].add_data(   cka_on_curr_data,              forgetting_pct, f"task_{task}")
+    #                         bt["table_align_forgetting"].add_data( align_score_on_curr_data[150], forgetting_pct, f"task_{task}")
+    #                         bt["table_cosine_forgetting"].add_data(cos_sim.mean().item(),         forgetting_pct, f"task_{task}")
 
-            for s in scatters.values():
-                s.close()
-            logger.info(f'  └── Task {task} done')
+    #                         if has_old:
+    #                             acc_old_pct = acc_curr_on_old * 100
+    #                             bt["table_eps_old"].add_data(           eps_on_old_data,   acc_old_pct,    f"task_{task}")
+    #                             bt["table_sigma_old"].add_data(         sigma_on_old_data, acc_old_pct,    f"task_{task}")
+    #                             bt["table_cka_old"].add_data(           cka_on_old_data,   acc_old_pct,    f"task_{task}")
+    #                             bt["table_eps_forgetting_old"].add_data(  eps_on_old_data,   forgetting_pct, f"task_{task}")
+    #                             bt["table_sigma_forgetting_old"].add_data(sigma_on_old_data, forgetting_pct, f"task_{task}")
+    #                             bt["table_cka_forgetting_old"].add_data(  cka_on_old_data,   forgetting_pct, f"task_{task}")
+    #                             bt["table_old_curr_eps_acc"].add_data(eps_on_old_data,  acc_old_pct,    "old",  round_global)
+    #                             bt["table_old_curr_eps_acc"].add_data(eps_on_curr_data, acc_curr_pct,   "curr", round_global)
+    #                             bt["table_old_curr_eps_fgt"].add_data(eps_on_old_data,  forgetting_pct, "old",  round_global)
+    #                             bt["table_old_curr_eps_fgt"].add_data(eps_on_curr_data, forgetting_pct, "curr", round_global)
+    #                             bt["table_kernel_old"].add_data(kernel_cka, acc_old_pct, f"task_{task}")
+    #                             bt["table_nl_cka_old"].add_data(nl_cka, acc_old_pct, f"task_{task}")
+    #                 if args.use_wandb and scalar_log:
+    #                     #print(f"DEbug Round{round_global} Round_idex = {round_idx} scalar_log_size{scalar_log.__sizeof__} double_log{double_log.__sizeof__}")
+    #                     wandb.log({**scalar_log,**double_log,"round_global": round_global})
+
+    #         # ================================================================
+    #         # SAU KHI XONG 25 ROUND → log scatter 1 lần cho cả task
+    #         # ================================================================
+    #         # ── SAU vòng for task — log scatter tất cả block ────────────────────
+    #         if args.use_wandb:
+    #             for block_idx in range(num_blocks):
+    #                 bt = block_tables[block_idx]
+    #                 wandb.log({
+    #                     "round_global": round_global,
+    #                     # ===== CURR DATA =====
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Accuracy_curr": wandb.plot.scatter(
+    #                         bt["table_eps"],   "epsilon",  "accuracy",
+    #                         title=f"[Curr] Epsilon vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Accuracy_curr": wandb.plot.scatter(
+    #                         bt["table_sigma"], "sigma",    "accuracy",
+    #                         title=f"[Curr] Sigma vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Accuracy_curr": wandb.plot.scatter(
+    #                         bt["table_cka"],   "cka",      "accuracy",
+    #                         title=f"[Curr] CKA vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Align150_vs_Accuracy_curr": wandb.plot.scatter(
+    #                         bt["table_align"], "align150", "accuracy",
+    #                         title=f"[Curr] Align150 vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Cosine_vs_Accuracy_curr": wandb.plot.scatter(
+    #                         bt["table_cosine"],"cosine",   "accuracy",
+    #                         title=f"[Curr] Cosine vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Forgetting_curr": wandb.plot.scatter(
+    #                         bt["table_eps_forgetting"],    "epsilon",  "forgetting",
+    #                         title=f"[Curr] Epsilon vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Forgetting_curr": wandb.plot.scatter(
+    #                         bt["table_sigma_forgetting"],  "sigma",    "forgetting",
+    #                         title=f"[Curr] Sigma vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Forgetting_curr": wandb.plot.scatter(
+    #                         bt["table_cka_forgetting"],    "cka",      "forgetting",
+    #                         title=f"[Curr] CKA vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Align150_vs_Forgetting_curr": wandb.plot.scatter(
+    #                         bt["table_align_forgetting"],  "align150", "forgetting",
+    #                         title=f"[Curr] Align150 vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Cosine_vs_Forgetting_curr": wandb.plot.scatter(
+    #                         bt["table_cosine_forgetting"], "cosine",   "forgetting",
+    #                         title=f"[Curr] Cosine vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+
+    #                     # ===== OLD DATA =====
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Accuracy_old": wandb.plot.scatter(
+    #                         bt["table_eps_old"],              "epsilon", "accuracy",
+    #                         title=f"[Old] Epsilon vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Accuracy_old": wandb.plot.scatter(
+    #                         bt["table_sigma_old"],            "sigma",   "accuracy",
+    #                         title=f"[Old] Sigma vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Accuracy_old": wandb.plot.scatter(
+    #                         bt["table_cka_old"],              "cka",     "accuracy",
+    #                         title=f"[Old] CKA vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Kernel_vs_Accuracy_old": wandb.plot.scatter(
+    #                         bt["table_kernel_old"],           "kernel",  "accuracy",
+    #                         title=f"[Old] Kernel vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/NL_CKA_vs_Accuracy_old": wandb.plot.scatter(
+    #                         bt["table_nl_cka_old"],           "nl_cka",  "accuracy",
+    #                         title=f"[Old] NL_CKA vs Accuracy | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Epsilon_vs_Forgetting_old": wandb.plot.scatter(
+    #                         bt["table_eps_forgetting_old"],   "epsilon", "forgetting",
+    #                         title=f"[Old] Epsilon vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/Sigma_vs_Forgetting_old": wandb.plot.scatter(
+    #                         bt["table_sigma_forgetting_old"], "sigma",   "forgetting",
+    #                         title=f"[Old] Sigma vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                     f"Custom/Block{block_idx}/Tasks{task}/CKA_vs_Forgetting_old": wandb.plot.scatter(
+    #                         bt["table_cka_forgetting_old"],   "cka",     "forgetting",
+    #                         title=f"[Old] CKA vs Forgetting | Block{block_idx} — Task{task}"
+    #                     ),
+    #                 })
+
+    #         for s in scatters.values():
+    #             s.close()
+    #         logger.info(f'  └── Task {task} done')
 
     logger.info(f'\n✅  Hoàn thành! CSV → {output_file}')
 
