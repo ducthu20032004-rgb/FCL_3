@@ -765,7 +765,7 @@ def measure_all_representation_drift(args):
                                 f'{prefix}/acc_t_on_head': acc_t_on_head * 100,
                                 f'{prefix}/acc_drop_rate': acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'),
                                 f'{prefix}/cos_logit_mean': cos_logit_mean,
-
+                                f'{prefix}/forgetting_drop': drop_acc * 100,
                                 # neuron-level
                                 f'{prefix}/drift_neuron': drift_neuron,
                                 f'{prefix}/cosine_neuron': cosine_neuron,
