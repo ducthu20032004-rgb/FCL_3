@@ -482,7 +482,7 @@ def measure_all_representation_drift(args):
 
                 ckpt_t  = get_model_path(args.saving_dir, client_id, t,      round_idx)
                 ckpt_tp = get_model_path(args.saving_dir, client_id, tprime, round_idx)
-
+                ckpt_eps_t = get_model_path(args.saving_dir, client_id, t, 24)
                 skip = False
                 for ckpt in [ckpt_t, ckpt_tp]:
                     if not os.path.isfile(ckpt):
@@ -492,6 +492,7 @@ def measure_all_representation_drift(args):
                     continue
 
                 model_t      = load_resnet18_from_checkpoint(ckpt_t,  load_head=False)
+                model_eps_t = load_resnet18_from_checkpoint(ckpt_eps_t, load_head=False)
                 model_tprime = load_resnet18_from_checkpoint(ckpt_tp, load_head=False)
                 logger.info(f'  │  model_t  ← {ckpt_t}')
                 logger.info(f'  │  model_t\' ← {ckpt_tp}')
@@ -579,14 +580,14 @@ def measure_all_representation_drift(args):
 
                     try:
                         feat_t_old  = compute_feature_resnet18(
-                            model_t,      t,      test_data_t, target_layer,
+                            model_eps_t,      t,      test_data_t, target_layer,
                             args.seed, args)
                         feat_tp_old = compute_feature_resnet18(
                             model_tprime, tprime, test_data_t, target_layer,
                             args.seed, args)
                         
                         feat_t_curr = compute_feature_resnet18(
-                            model_t, tprime, test_data_tprime, target_layer,
+                            model_eps_t, tprime, test_data_tprime, target_layer,
                             args.seed, args)
                         feat_tp_curr = compute_feature_resnet18(
                             model_tprime, tprime, test_data_tprime, target_layer,
@@ -621,7 +622,7 @@ def measure_all_representation_drift(args):
                         linear_cka_curr     = cka_obj.linear_CKA(feat_t_tensor_curr, feat_tp_tensor_curr)
                         kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
 
-                        # FIX: chỉ dùng [100, 150], bỏ key 20
+                        
                         topk_list  = [100, 150]
                         align_score = {}
                         for k in topk_list:
