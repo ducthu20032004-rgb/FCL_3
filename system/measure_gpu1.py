@@ -441,7 +441,7 @@ def measure_all_representation_drift(args):
     # key = (t, tprime, block_idx) → value = old_test_acc của round trước
     acc_history_old: dict = {}
 
-    for client_id in [9]:
+    for client_id in [8]:
         logger.info('=' * 60)
         logger.info(
             f'  CLIENT {client_id:>2} / {args.num_clients - 1}'
