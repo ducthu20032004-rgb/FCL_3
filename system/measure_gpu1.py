@@ -441,7 +441,7 @@ def measure_all_representation_drift(args):
     # key = (t, tprime, block_idx) → value = old_test_acc của round trước
     acc_history_old: dict = {}
 
-    for client_id in [1]:
+    for client_id in [0]:
         logger.info('=' * 60)
         logger.info(
             f'  CLIENT {client_id:>2} / {args.num_clients - 1}'
@@ -605,7 +605,7 @@ def measure_all_representation_drift(args):
                         kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
 
                         
-                        topk_list  = [100, 150]
+                        topk_list  = [10,15, 20,30,50,75]
                         align_score = {}
                         for k in topk_list:
                             align_score[k], _ = compute_alignment_from_arrays(
@@ -658,65 +658,65 @@ def measure_all_representation_drift(args):
                             f'forgetting={drop_acc*100:.4f}%'
                             f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
                             f'ratio={ratio_feature:.4f}  '
-                            f'align@100={align_score[100]:.4f}  '
-                            f'align@150={align_score[150]:.4f}  '
+                            f'align@10={align_score[10]:.4f}  '
+                            f'align@20={align_score[20]:.4f}  '
                             f'ACC({tprime})={current_test_acc*100:.2f}%  '
                             f'ACC_old({t})={old_test_acc*100:.2f}%  '
                             f'ACC_t_real={acc_t_on_head*100:.2f}%  '
                             f'acc_drop={acc_drop_rate*100 if acc_drop_rate==acc_drop_rate else float("nan"):.2f}%'
                         )
 
-                        # ── ScatterLogger ────────────────────────────────────
-                        scatter.log_pair("round_vs_cosine_logit",       round_idx, cos_logit_mean)
-                        scatter.log_pair("round_vs_sigma_old",               round_idx, sigma_old)
-                        scatter.log_pair("round_vs_eps_old",                 round_idx, eps_old)
-                        scatter.log_pair("round_vs_cka_old",                 round_idx, float(cka_old))
-                        scatter.log_pair("round_vs_linear_cka_old",      round_idx, float(linear_cka_old))
-                        scatter.log_pair("round_vs_kernel_cka_old",      round_idx, float(kernel_cka_old))
-                        scatter.log_pair("round_vs_sigma_curr",            round_idx, sigma_curr)
-                        scatter.log_pair("round_vs_eps_curr",            round_idx, eps_curr)
-                        scatter.log_pair("round_vs_cka_curr",            round_idx, float(cka_curr))
-                        scatter.log_pair("round_vs_linear_cka_curr",     round_idx, float(linear_cka_curr))
-                        scatter.log_pair("round_vs_kernel_cka_curr",     round_idx, float(kernel_cka_curr))
-                        scatter.log_pair("round_vs_non_linear_cka",      round_idx, cka_gap)
-                        scatter.log_pair("round_vs_align100",            round_idx, align_score[100])
-                        scatter.log_pair("round_vs_align150",            round_idx, align_score[150])
-                        scatter.log_pair("round_vs_ratio_feature",       round_idx, ratio_feature)
-                        scatter.log_pair("round_vs_acc_tprime",          round_idx, current_test_acc * 100)
-                        scatter.log_pair("round_vs_accold",              round_idx, old_test_acc * 100)
-                        scatter.log_pair("round_vs_weightnorm_t",        round_idx, width_t)
-                        scatter.log_pair("round_vs_weightnorm_tprime",   round_idx, width_tp)
-                        scatter.log_pair("sigma_vs_eps_old",                 sigma_old,     eps_old)
-                        scatter.log_pair("cka_vs_accold",                float(cka_old), old_test_acc * 100)
-                        scatter.log_pair("eps_vs_accold",                eps_old,        old_test_acc * 100)
-                        scatter.log_pair("kernel_cka_vs_accold",         float(kernel_cka_old), old_test_acc * 100)
-                        scatter.log_pair("cosine_logit_vs_accold",       cos_logit_mean,    old_test_acc * 100)
-                        scatter.log_pair("align100_vs_accold",           align_score[100],  old_test_acc * 100)
-                        scatter.log_pair("align150_vs_accold",           align_score[150],  old_test_acc * 100)
-                        scatter.log_pair("sigma_vs_accold",              sigma_old,             old_test_acc * 100)
-                        scatter.log_pair("non_linear_cka_vs_accold",     cka_gap,           old_test_acc * 100)
-                        scatter.log_pair("ratio_feature_vs_accold",      ratio_feature,     old_test_acc * 100)
-                        scatter.log_pair("weightnorm_t_vs_accold",       width_t,           old_test_acc * 100)
-                        scatter.log_pair("weightnorm_tprime_vs_accold",  width_tp,          old_test_acc * 100)
-                        # NEW: neuron-level scatters
-                        scatter.log_pair("round_vs_drift_neuron",        round_idx, drift_neuron)
-                        scatter.log_pair("round_vs_cosine_neuron",       round_idx, cosine_neuron)
-                        scatter.log_pair("round_vs_overlap",             round_idx, overlap)
-                        scatter.log_pair("round_vs_overlap_deficit",     round_idx, overlap_deficit)
-                        scatter.log_pair("round_vs_cka_vs_overlap_residual", round_idx, cka_vs_overlap_residual)
-                        scatter.log_pair("round_vs_acc_drop_rate",       round_idx, acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'))
-                        scatter.log_pair("round_vs_drift_per_acc",       round_idx, drift_per_acc)
-                        scatter.log_pair("overlap_vs_accold",            overlap,            old_test_acc * 100)
-                        scatter.log_pair("overlap_deficit_vs_accold",    overlap_deficit,    old_test_acc * 100)
-                        scatter.log_pair("drift_neuron_vs_accold",       drift_neuron,       old_test_acc * 100)
-                        scatter.log_pair("cosine_neuron_vs_accold",      cosine_neuron,      old_test_acc * 100)
-                        scatter.log_pair("cka_vs_overlap",               float(cka_old),         overlap)
-                        scatter.log_pair("residual_vs_accold",           cka_vs_overlap_residual, old_test_acc * 100)
-                        scatter.log_pair("cka_gap_vs_accold",            cka_gap,            old_test_acc * 100)
-                        scatter.log_pair("drift_per_acc_vs_round",       round_idx,          drift_per_acc)
+                        # # ── ScatterLogger ────────────────────────────────────
+                        # scatter.log_pair("round_vs_cosine_logit",       round_idx, cos_logit_mean)
+                        # scatter.log_pair("round_vs_sigma_old",               round_idx, sigma_old)
+                        # scatter.log_pair("round_vs_eps_old",                 round_idx, eps_old)
+                        # scatter.log_pair("round_vs_cka_old",                 round_idx, float(cka_old))
+                        # scatter.log_pair("round_vs_linear_cka_old",      round_idx, float(linear_cka_old))
+                        # scatter.log_pair("round_vs_kernel_cka_old",      round_idx, float(kernel_cka_old))
+                        # scatter.log_pair("round_vs_sigma_curr",            round_idx, sigma_curr)
+                        # scatter.log_pair("round_vs_eps_curr",            round_idx, eps_curr)
+                        # scatter.log_pair("round_vs_cka_curr",            round_idx, float(cka_curr))
+                        # scatter.log_pair("round_vs_linear_cka_curr",     round_idx, float(linear_cka_curr))
+                        # scatter.log_pair("round_vs_kernel_cka_curr",     round_idx, float(kernel_cka_curr))
+                        # scatter.log_pair("round_vs_non_linear_cka",      round_idx, cka_gap)
+                        # scatter.log_pair("round_vs_align100",            round_idx, align_score[100])
+                        # scatter.log_pair("round_vs_align150",            round_idx, align_score[150])
+                        # scatter.log_pair("round_vs_ratio_feature",       round_idx, ratio_feature)
+                        # scatter.log_pair("round_vs_acc_tprime",          round_idx, current_test_acc * 100)
+                        # scatter.log_pair("round_vs_accold",              round_idx, old_test_acc * 100)
+                        # scatter.log_pair("round_vs_weightnorm_t",        round_idx, width_t)
+                        # scatter.log_pair("round_vs_weightnorm_tprime",   round_idx, width_tp)
+                        # scatter.log_pair("sigma_vs_eps_old",                 sigma_old,     eps_old)
+                        # scatter.log_pair("cka_vs_accold",                float(cka_old), old_test_acc * 100)
+                        # scatter.log_pair("eps_vs_accold",                eps_old,        old_test_acc * 100)
+                        # scatter.log_pair("kernel_cka_vs_accold",         float(kernel_cka_old), old_test_acc * 100)
+                        # scatter.log_pair("cosine_logit_vs_accold",       cos_logit_mean,    old_test_acc * 100)
+                        # scatter.log_pair("align100_vs_accold",           align_score[100],  old_test_acc * 100)
+                        # scatter.log_pair("align150_vs_accold",           align_score[150],  old_test_acc * 100)
+                        # scatter.log_pair("sigma_vs_accold",              sigma_old,             old_test_acc * 100)
+                        # scatter.log_pair("non_linear_cka_vs_accold",     cka_gap,           old_test_acc * 100)
+                        # scatter.log_pair("ratio_feature_vs_accold",      ratio_feature,     old_test_acc * 100)
+                        # scatter.log_pair("weightnorm_t_vs_accold",       width_t,           old_test_acc * 100)
+                        # scatter.log_pair("weightnorm_tprime_vs_accold",  width_tp,          old_test_acc * 100)
+                        # # NEW: neuron-level scatters
+                        # scatter.log_pair("round_vs_drift_neuron",        round_idx, drift_neuron)
+                        # scatter.log_pair("round_vs_cosine_neuron",       round_idx, cosine_neuron)
+                        # scatter.log_pair("round_vs_overlap",             round_idx, overlap)
+                        # scatter.log_pair("round_vs_overlap_deficit",     round_idx, overlap_deficit)
+                        # scatter.log_pair("round_vs_cka_vs_overlap_residual", round_idx, cka_vs_overlap_residual)
+                        # scatter.log_pair("round_vs_acc_drop_rate",       round_idx, acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'))
+                        # scatter.log_pair("round_vs_drift_per_acc",       round_idx, drift_per_acc)
+                        # scatter.log_pair("overlap_vs_accold",            overlap,            old_test_acc * 100)
+                        # scatter.log_pair("overlap_deficit_vs_accold",    overlap_deficit,    old_test_acc * 100)
+                        # scatter.log_pair("drift_neuron_vs_accold",       drift_neuron,       old_test_acc * 100)
+                        # scatter.log_pair("cosine_neuron_vs_accold",      cosine_neuron,      old_test_acc * 100)
+                        # scatter.log_pair("cka_vs_overlap",               float(cka_old),         overlap)
+                        # scatter.log_pair("residual_vs_accold",           cka_vs_overlap_residual, old_test_acc * 100)
+                        # scatter.log_pair("cka_gap_vs_accold",            cka_gap,            old_test_acc * 100)
+                        # scatter.log_pair("drift_per_acc_vs_round",       round_idx,          drift_per_acc)
 
                         # ── WandB ─────────────────────────────────────────────
-                        if args.use_wandb and (block_idx == 4 or block_idx == 3):
+                        if args.use_wandb :
                             prefix = f'block{block_idx}/pair_{t}_{tprime}'
 
                             wandb.log({
@@ -731,6 +731,11 @@ def measure_all_representation_drift(args):
                                 f'{prefix}/cka_curr': float(cka_curr),
                                 f'{prefix}/linear_cka_curr': float(linear_cka_curr),
                                 f'{prefix}/kernel_cka_curr': float(kernel_cka_curr),
+                                f'{prefix}/align10': align_score[10],
+                                f'{prefix}/align15': align_score[15],
+                                f'{prefix}/align20': align_score[20],
+                                f'{prefix}/align30': align_score[30],
+                                f'{prefix}/align50': align_score[50],
                                 f'{prefix}/align100': align_score[100],
                                 f'{prefix}/align150': align_score[150],
 
@@ -798,7 +803,7 @@ def measure_all_representation_drift(args):
                                 f'{float(cka_curr)},{float(linear_cka_curr)},{float(kernel_cka_curr)},'
                                 f'{old_test_acc},{current_test_acc},{acc_t_on_head},{drop_acc*100},'
                                 f'{cos_logit_mean},'
-                                f'{align_score[150]},'
+                                f'{align_score[10]},{align_score[15]},{align_score[20]},{align_score[30]},{align_score[50]},{align_score[75]},'
                                 f'{drift_neuron},{cosine_neuron},{overlap},'
                                 f'{drift_per_acc}\n'
                             )
@@ -846,7 +851,7 @@ def measure_all_drift_follow_task_client_pair(args):
             f.write('block_idx,client1,client2,t,'
                     'cka,sigma,eps,' 
                     'cosine_similarity,'
-                    'align@100,align@150\n'
+                    'align@10,align@15,align@20,align@30,align@50,align@75\n'
             )
 
     client_pairs = list(itertools.combinations(range(10), 2))
@@ -941,7 +946,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     
                     linear_cka = TorchCKA(device=DEVICE).linear_CKA(torch.from_numpy(feat_c).float().to(DEVICE), torch.from_numpy(feat_cp).float().to(DEVICE))
                     kernel_cka = TorchCKA(device=DEVICE).kernel_CKA(torch.from_numpy(feat_c).float().to(DEVICE), torch.from_numpy(feat_cp).float().to(DEVICE), sigma=None)
-                    topk_list = [5, 10, 20, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+                    topk_list = [5, 10, 20, 50, 100, 150]
                     align_score = {}
                     for list_ in topk_list:
                         align_score[list_], _ = compute_alignment_from_arrays(
