@@ -452,12 +452,12 @@ def measure_all_representation_drift(args):
         client_class_order = all_class_orders[client_id][:10]
         list_acc_matrix = []
         for (t, tprime) in task_pairs:
-            scatters = {
-                block_idx: ScatterLogger(
-                    f"/{root}/results_25_4/block{block_idx}/taskpair_{t}_{tprime}"
-                )
-                for block_idx in range(num_blocks)
-            }
+            # scatters = {
+            #     block_idx: ScatterLogger(
+            #         f"/{root}/results_25_4/block{block_idx}/taskpair_{t}_{tprime}"
+            #     )
+            #     for block_idx in range(num_blocks)
+            # }
 
             for round_idx in range(25):
                 logger.info(f'  ┌── Task pair ({t}, {tprime}), round {round_idx}')
@@ -486,79 +486,79 @@ def measure_all_representation_drift(args):
                     client_id, task=tprime, classes_per_task=args.cpt,
                     count_labels=False, train=False)
 
-                loader_t      = _make_loader(test_data_t)
-                loader_tprime = _make_loader(test_data_tprime)
+                # loader_t      = _make_loader(test_data_t)
+                # loader_tprime = _make_loader(test_data_tprime)
 
-                model_head_t  = load_model_with_head(ckpt_t,  num_classes=args.classes)
-                model_head_tp = load_model_with_head(ckpt_tp, num_classes=args.classes)
+                # model_head_t  = load_model_with_head(ckpt_t,  num_classes=args.classes)
+                # model_head_tp = load_model_with_head(ckpt_tp, num_classes=args.classes)
 
-                # ── Logits & cosine similarity (head level) ──────────────────
-                logits_t_list      = []
-                logits_tprime_list = []
+                # # ── Logits & cosine similarity (head level) ──────────────────
+                # logits_t_list      = []
+                # logits_tprime_list = []
 
-                for x_t, _ in loader_t:
-                    logits_t_list.append(
-                        model_head_t(x_t.to(DEVICE)).detach().cpu()
-                    )
-                for x_tp, _ in loader_tprime:
-                    logits_tprime_list.append(
-                        model_head_tp(x_tp.to(DEVICE)).detach().cpu()
-                    )
+                # for x_t, _ in loader_t:
+                #     logits_t_list.append(
+                #         model_head_t(x_t.to(DEVICE)).detach().cpu()
+                #     )
+                # for x_tp, _ in loader_tprime:
+                #     logits_tprime_list.append(
+                #         model_head_tp(x_tp.to(DEVICE)).detach().cpu()
+                #     )
 
-                logits_t      = torch.cat(logits_t_list,      dim=0)
-                logits_tprime = torch.cat(logits_tprime_list, dim=0)
+                # logits_t      = torch.cat(logits_t_list,      dim=0)
+                # logits_tprime = torch.cat(logits_tprime_list, dim=0)
 
-                # cos_sin: cosine giữa logit của model_tp trên data_t vs data_tp
-                # NOTE: 2 loader khác nhau nên shape có thể khác nhau
-                # → dùng logits của cùng loader_t cho cả 2 model để so sánh fair
-                logits_tp_on_t_list = []
-                for x_t, _ in loader_t:
-                    logits_tp_on_t_list.append(
-                        model_head_tp(x_t.to(DEVICE)).detach().cpu()
-                    )
-                logits_tp_on_t = torch.cat(logits_tp_on_t_list, dim=0)
+                # # cos_sin: cosine giữa logit của model_tp trên data_t vs data_tp
+                # # NOTE: 2 loader khác nhau nên shape có thể khác nhau
+                # # → dùng logits của cùng loader_t cho cả 2 model để so sánh fair
+                # logits_tp_on_t_list = []
+                # for x_t, _ in loader_t:
+                #     logits_tp_on_t_list.append(
+                #         model_head_tp(x_t.to(DEVICE)).detach().cpu()
+                #     )
+                # logits_tp_on_t = torch.cat(logits_tp_on_t_list, dim=0)
 
-                # cosine giữa logit của model_t và model_tp, cùng trên data_t
-                cos_sin = torch.nn.functional.cosine_similarity(
-                    logits_t, logits_tp_on_t, dim=1
-                )
+                # # cosine giữa logit của model_t và model_tp, cùng trên data_t
+                # cos_sin = torch.nn.functional.cosine_similarity(
+                #     logits_t, logits_tp_on_t, dim=1
+                # )
 
-                # ── Accuracy ─────────────────────────────────────────────────
-                acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
-                current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
-                old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
-                list_acc_matrix.append(acc_t_on_head)
-                drop_acc = max(list_acc_matrix) - old_test_acc
-                # ── Neuron importance (layer4[-1], fixed) ────────────────────
-                target_layer_tp = [model_tprime.layer4[-1]]
-                model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
-                neuron_curr     = model_cam_curr.get_importance(loader_t, target_layer_tp)
+                # # ── Accuracy ─────────────────────────────────────────────────
+                # acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
+                # current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
+                # old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
+                # list_acc_matrix.append(acc_t_on_head)
+                # drop_acc = max(list_acc_matrix) - old_test_acc
+                # # ── Neuron importance (layer4[-1], fixed) ────────────────────
+                # target_layer_tp = [model_tprime.layer4[-1]]
+                # model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
+                # neuron_curr     = model_cam_curr.get_importance(loader_t, target_layer_tp)
 
-                target_layer_t = [model_t.layer4[-1]]
-                model_cam_prev = BaseCAM(model_t, target_layer_t)
-                neuron_prev    = model_cam_prev.get_importance(loader_t, target_layer_t)
+                # target_layer_t = [model_t.layer4[-1]]
+                # model_cam_prev = BaseCAM(model_t, target_layer_t)
+                # neuron_prev    = model_cam_prev.get_importance(loader_t, target_layer_t)
 
-                # Drift (L2)
-                drift_neuron = torch.norm(neuron_curr - neuron_prev).item()
+                # # Drift (L2)
+                # drift_neuron = torch.norm(neuron_curr - neuron_prev).item()
 
-                # Cosine similarity của importance vector
-                cosine_neuron = torch.nn.functional.cosine_similarity(
-                    neuron_curr.unsqueeze(0),
-                    neuron_prev.unsqueeze(0)
-                ).item()
+                # # Cosine similarity của importance vector
+                # cosine_neuron = torch.nn.functional.cosine_similarity(
+                #     neuron_curr.unsqueeze(0),
+                #     neuron_prev.unsqueeze(0)
+                # ).item()
 
-                # Top-k overlap
-                k_top    = 50
-                top_curr = torch.topk(neuron_curr, k_top).indices
-                top_prev = torch.topk(neuron_prev, k_top).indices
-                overlap  = len(
-                    set(top_curr.tolist()) & set(top_prev.tolist())
-                ) / k_top
+                # # Top-k overlap
+                # k_top    = 50
+                # top_curr = torch.topk(neuron_curr, k_top).indices
+                # top_prev = torch.topk(neuron_prev, k_top).indices
+                # overlap  = len(
+                #     set(top_curr.tolist()) & set(top_prev.tolist())
+                # ) / k_top
 
                 # ── Per-block loop ───────────────────────────────────────────
                 for block_idx in range(num_blocks):
                     target_layer = f'block{block_idx}'
-                    scatter      = scatters[block_idx]
+                    # scatter      = scatters[block_idx]
 
                     try:
                         feat_t_old  = compute_feature_resnet18(
@@ -576,33 +576,33 @@ def measure_all_representation_drift(args):
                             args.seed, args)
 
 
-                        if block_idx == 0:
-                            width_t = width_tp = float('nan')
-                        else:
-                            width_t  = compute_width(model_t,      block_idx - 1)
-                            width_tp = compute_width(model_tprime, block_idx - 1)
+                        # if block_idx == 0:
+                        #     width_t = width_tp = float('nan')
+                        # else:
+                        #     width_t  = compute_width(model_t,      block_idx - 1)
+                        #     width_tp = compute_width(model_tprime, block_idx - 1)
 
-                        eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t_old)
-                        sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
-                        eps_old           = compute_eps(feat_t_old, feat_tp_old)
-                        hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
+                        # eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t_old)
+                        # sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
+                        # eps_old           = compute_eps(feat_t_old, feat_tp_old)
+                        # hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
 
-                        feat_t_tensor_old  = torch.from_numpy(feat_t_old).float().to(DEVICE)
-                        feat_tp_tensor_old = torch.from_numpy(feat_tp_old).float().to(DEVICE)
-                        cka_obj        = TorchCKA(device=DEVICE)
-                        linear_cka_old     = cka_obj.linear_CKA(feat_t_tensor_old, feat_tp_tensor_old)
-                        kernel_cka_old     = cka_obj.kernel_CKA(feat_t_tensor_old, feat_tp_tensor_old, sigma=None)
+                        # feat_t_tensor_old  = torch.from_numpy(feat_t_old).float().to(DEVICE)
+                        # feat_tp_tensor_old = torch.from_numpy(feat_tp_old).float().to(DEVICE)
+                        # cka_obj        = TorchCKA(device=DEVICE)
+                        # linear_cka_old     = cka_obj.linear_CKA(feat_t_tensor_old, feat_tp_tensor_old)
+                        # kernel_cka_old     = cka_obj.kernel_CKA(feat_t_tensor_old, feat_tp_tensor_old, sigma=None)
 
-                        sigma_curr         = compute_sigma(feat_t_curr, feat_tp_curr)
-                        eps_curr           = compute_eps(feat_t_curr, feat_tp_curr)
-                        hsic_val, cka_curr = compute_cka(feat_t_curr, feat_tp_curr)
-                        gap_eps = eps_curr - eps_old
-                        gap_sigma = sigma_curr - sigma_old
-                        feat_t_tensor_curr  = torch.from_numpy(feat_t_curr).float().to(DEVICE)
-                        feat_tp_tensor_curr = torch.from_numpy(feat_tp_curr).float().to(DEVICE)
-                        cka_obj        = TorchCKA(device=DEVICE)
-                        linear_cka_curr     = cka_obj.linear_CKA(feat_t_tensor_curr, feat_tp_tensor_curr)
-                        kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
+                        # sigma_curr         = compute_sigma(feat_t_curr, feat_tp_curr)
+                        # eps_curr           = compute_eps(feat_t_curr, feat_tp_curr)
+                        # hsic_val, cka_curr = compute_cka(feat_t_curr, feat_tp_curr)
+                        # gap_eps = eps_curr - eps_old
+                        # gap_sigma = sigma_curr - sigma_old
+                        # feat_t_tensor_curr  = torch.from_numpy(feat_t_curr).float().to(DEVICE)
+                        # feat_tp_tensor_curr = torch.from_numpy(feat_tp_curr).float().to(DEVICE)
+                        # cka_obj        = TorchCKA(device=DEVICE)
+                        # linear_cka_curr     = cka_obj.linear_CKA(feat_t_tensor_curr, feat_tp_tensor_curr)
+                        # kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
 
                         
                         topk_list  = [10,15, 20,30,50,75]
@@ -611,60 +611,60 @@ def measure_all_representation_drift(args):
                             align_score[k], _ = compute_alignment_from_arrays(
                                 feat_t_old, feat_tp_old, "mutual_knn", topk=k, precise=True)
 
-                        # ── Derived metrics ──────────────────────────────────
-                        cka_gap                 = float(kernel_cka_curr) - float(linear_cka_curr)
-                        overlap_deficit         = 1.0 - overlap
-                        cka_vs_overlap_residual = float(cka_old) - overlap
-                        cos_logit_mean          = cos_sin.mean().item()
-                        ratio_feature           = (
-                            float(eta_max / eta_min) if eta_min > 0 else float('nan')
-                        )
+                        # # ── Derived metrics ──────────────────────────────────
+                        # cka_gap                 = float(kernel_cka_curr) - float(linear_cka_curr)
+                        # overlap_deficit         = 1.0 - overlap
+                        # cka_vs_overlap_residual = float(cka_old) - overlap
+                        # cos_logit_mean          = cos_sin.mean().item()
+                        # ratio_feature           = (
+                        #     float(eta_max / eta_min) if eta_min > 0 else float('nan')
+                        # )
 
-                        # acc_drop_rate: so với round trước của cùng (t, tprime, block)
-                        prev_key     = (t, tprime, block_idx)
-                        prev_acc_old = acc_history_old.get(prev_key, float('nan'))
-                        acc_drop_rate = (
-                            (prev_acc_old - old_test_acc)
-                            if not (prev_acc_old != prev_acc_old)  # not isnan
-                            else float('nan')
-                        )
-                        acc_history_old[prev_key] = old_test_acc
+                        # # acc_drop_rate: so với round trước của cùng (t, tprime, block)
+                        # prev_key     = (t, tprime, block_idx)
+                        # prev_acc_old = acc_history_old.get(prev_key, float('nan'))
+                        # acc_drop_rate = (
+                        #     (prev_acc_old - old_test_acc)
+                        #     if not (prev_acc_old != prev_acc_old)  # not isnan
+                        #     else float('nan')
+                        # )
+                        # acc_history_old[prev_key] = old_test_acc
 
-                        drift_per_acc = (
-                            drift_neuron / abs(acc_drop_rate)
-                            if (
-                                acc_drop_rate == acc_drop_rate  # not nan
-                                and abs(acc_drop_rate) > 1e-6
-                            )
-                            else float('nan')
-                        )
+                        # drift_per_acc = (
+                        #     drift_neuron / abs(acc_drop_rate)
+                        #     if (
+                        #         acc_drop_rate == acc_drop_rate  # not nan
+                        #         and abs(acc_drop_rate) > 1e-6
+                        #     )
+                        #     else float('nan')
+                        # )
 
                         done    += 1
                         progress = f'[{done}/{total}]'
 
-                        logger.info(
-                            f'  │  {progress} {target_layer} | '
-                            f'cos_logit={cos_logit_mean:.4f}  '
-                            f'drift_neuron={drift_neuron:.4f}  '
-                            f'cosine_neuron={cosine_neuron:.4f}  '
-                            f'overlap@{k_top}={overlap:.4f}  '
-                            f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}  gap_σ={gap_sigma:.4f}  gap_ε={gap_eps:.4f}  '
-                            f'σ_curr={sigma_curr:.4f}  ε_curr={eps_curr:.4f}  '
-                            f'CKA_old={cka_old:.4f}  linear_CKA_old={float(linear_cka_old):.4f}  '
-                            f'kernel_CKA_old={float(kernel_cka_old):.4f}  '
-                            f'CKA_curr={cka_curr:.4f}  linear_CKA_curr={float(linear_cka_curr):.4f}  '
-                            f'kernel_CKA_curr={float(kernel_cka_curr):.4f}  '
-                            f'cka_gap={cka_gap:.4f}  '
-                            f'forgetting={drop_acc*100:.4f}%'
-                            f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
-                            f'ratio={ratio_feature:.4f}  '
-                            f'align@10={align_score[10]:.4f}  '
-                            f'align@20={align_score[20]:.4f}  '
-                            f'ACC({tprime})={current_test_acc*100:.2f}%  '
-                            f'ACC_old({t})={old_test_acc*100:.2f}%  '
-                            f'ACC_t_real={acc_t_on_head*100:.2f}%  '
-                            f'acc_drop={acc_drop_rate*100 if acc_drop_rate==acc_drop_rate else float("nan"):.2f}%'
-                        )
+                        # logger.info(
+                        #     f'  │  {progress} {target_layer} | '
+                        #     f'cos_logit={cos_logit_mean:.4f}  '
+                        #     f'drift_neuron={drift_neuron:.4f}  '
+                        #     f'cosine_neuron={cosine_neuron:.4f}  '
+                        #     f'overlap@{k_top}={overlap:.4f}  '
+                        #     f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}  gap_σ={gap_sigma:.4f}  gap_ε={gap_eps:.4f}  '
+                        #     f'σ_curr={sigma_curr:.4f}  ε_curr={eps_curr:.4f}  '
+                        #     f'CKA_old={cka_old:.4f}  linear_CKA_old={float(linear_cka_old):.4f}  '
+                        #     f'kernel_CKA_old={float(kernel_cka_old):.4f}  '
+                        #     f'CKA_curr={cka_curr:.4f}  linear_CKA_curr={float(linear_cka_curr):.4f}  '
+                        #     f'kernel_CKA_curr={float(kernel_cka_curr):.4f}  '
+                        #     f'cka_gap={cka_gap:.4f}  '
+                        #     f'forgetting={drop_acc*100:.4f}%'
+                        #     f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
+                        #     f'ratio={ratio_feature:.4f}  '
+                        #     f'align@10={align_score[10]:.4f}  '
+                        #     f'align@20={align_score[20]:.4f}  '
+                        #     f'ACC({tprime})={current_test_acc*100:.2f}%  '
+                        #     f'ACC_old({t})={old_test_acc*100:.2f}%  '
+                        #     f'ACC_t_real={acc_t_on_head*100:.2f}%  '
+                        #     f'acc_drop={acc_drop_rate*100 if acc_drop_rate==acc_drop_rate else float("nan"):.2f}%'
+                        # )
 
                         # # ── ScatterLogger ────────────────────────────────────
                         # scatter.log_pair("round_vs_cosine_logit",       round_idx, cos_logit_mean)
@@ -725,107 +725,107 @@ def measure_all_representation_drift(args):
                                 'round': round_idx,
                                 'client': client_id,
 
-                                # representation
-                                f'{prefix}/cka': float(cka_old),
-                                f'{prefix}/linear_cka': float(linear_cka_old),
-                                f'{prefix}/kernel_cka': float(kernel_cka_old),
-                                f'{prefix}/cka_curr': float(cka_curr),
-                                f'{prefix}/linear_cka_curr': float(linear_cka_curr),
-                                f'{prefix}/kernel_cka_curr': float(kernel_cka_curr),
+                                # # representation
+                                # f'{prefix}/cka': float(cka_old),
+                                # f'{prefix}/linear_cka': float(linear_cka_old),
+                                # f'{prefix}/kernel_cka': float(kernel_cka_old),
+                                # f'{prefix}/cka_curr': float(cka_curr),
+                                # f'{prefix}/linear_cka_curr': float(linear_cka_curr),
+                                # f'{prefix}/kernel_cka_curr': float(kernel_cka_curr),
                                 f'{prefix}/align10': align_score[10],
                                 f'{prefix}/align15': align_score[15],
                                 f'{prefix}/align20': align_score[20],
                                 f'{prefix}/align30': align_score[30],
                                 f'{prefix}/align50': align_score[50],
                                 f'{prefix}/align75': align_score[75],
-                                f'{prefix}/eta_min_norm': eta_min_n,
-                                f'{prefix}/eta_max_norm': eta_max_n,
+                                # f'{prefix}/eta_min_norm': eta_min_n,
+                                # f'{prefix}/eta_max_norm': eta_max_n,
 
-                                f'{prefix}/ratio_feature': ratio_feature,
-                                f'{prefix}/width_t': width_t,
-                                f'{prefix}/width_tprime': width_tp,
-                                f'{prefix}/sigma_old': sigma_old,
-                                f'{prefix}/eps_old': eps_old,
-                                f'{prefix}/sigma_curr': sigma_curr,
-                                f'{prefix}/eps_curr': eps_curr,
-                                f'{prefix}/gap_sigma': gap_sigma,
-                                f'{prefix}/gap_eps': gap_eps,
-                                f'{prefix}/accuracy_tprime': current_test_acc * 100,
-                                f'{prefix}/accold_taskpair_{t}_{tprime}': old_test_acc * 100,
-                                f'{prefix}/acc_t_on_head': acc_t_on_head * 100,
-                                f'{prefix}/acc_drop_rate': acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'),
-                                f'{prefix}/cos_logit_mean': cos_logit_mean,
-                                f'{prefix}/forgetting_drop': drop_acc * 100,
-                                # neuron-level
-                                f'{prefix}/drift_neuron': drift_neuron,
-                                f'{prefix}/cosine_neuron': cosine_neuron,
-                                f'{prefix}/overlap_at50': overlap,
-                                f'{prefix}/overlap_deficit': overlap_deficit,
+                                # f'{prefix}/ratio_feature': ratio_feature,
+                                # f'{prefix}/width_t': width_t,
+                                # f'{prefix}/width_tprime': width_tp,
+                                # f'{prefix}/sigma_old': sigma_old,
+                                # f'{prefix}/eps_old': eps_old,
+                                # f'{prefix}/sigma_curr': sigma_curr,
+                                # f'{prefix}/eps_curr': eps_curr,
+                                # f'{prefix}/gap_sigma': gap_sigma,
+                                # f'{prefix}/gap_eps': gap_eps,
+                                # f'{prefix}/accuracy_tprime': current_test_acc * 100,
+                                # f'{prefix}/accold_taskpair_{t}_{tprime}': old_test_acc * 100,
+                                # f'{prefix}/acc_t_on_head': acc_t_on_head * 100,
+                                # f'{prefix}/acc_drop_rate': acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan'),
+                                # f'{prefix}/cos_logit_mean': cos_logit_mean,
+                                # f'{prefix}/forgetting_drop': drop_acc * 100,
+                                # # neuron-level
+                                # f'{prefix}/drift_neuron': drift_neuron,
+                                # f'{prefix}/cosine_neuron': cosine_neuron,
+                                # f'{prefix}/overlap_at50': overlap,
+                                # f'{prefix}/overlap_deficit': overlap_deficit,
 
-                                # derived
-                                f'{prefix}/cka_gap': cka_gap,
-                                f'{prefix}/cka_vs_overlap_residual': cka_vs_overlap_residual,
-                                f'{prefix}/acc_drop_rate': (
-                                    acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan')
-                                ),
-                                f'{prefix}/drift_per_acc_unit': drift_per_acc,
+                                # # derived
+                                # f'{prefix}/cka_gap': cka_gap,
+                                # f'{prefix}/cka_vs_overlap_residual': cka_vs_overlap_residual,
+                                # f'{prefix}/acc_drop_rate': (
+                                #     acc_drop_rate * 100 if acc_drop_rate == acc_drop_rate else float('nan')
+                                # ),
+                                # f'{prefix}/drift_per_acc_unit': drift_per_acc,
                             })
 
-                            # Scatter plots tường minh — chỉ log ở block cuối
-                            if block_idx == num_blocks -1:
-                                for (xa, xb, col_a, col_b, title_suffix) in [
-                                    (overlap,                   old_test_acc * 100, "overlap@50",        "acc_old",  "overlap_vs_acc_old"),
-                                    (float(cka_old),                overlap,            "cka",               "overlap",  "cka_vs_overlap"),
-                                    (cka_vs_overlap_residual,   old_test_acc * 100, "cka_minus_overlap", "acc_old",  "residual_vs_acc_old"),
-                                    (drift_neuron,              old_test_acc * 100, "drift_neuron",      "acc_old",  "drift_neuron_vs_acc_old"),
-                                    (cosine_neuron,             old_test_acc * 100, "cosine_neuron",     "acc_old",  "cosine_neuron_vs_acc_old"),
-                                    (cka_gap,                   old_test_acc * 100, "cka_gap",           "acc_old",  "cka_gap_vs_acc_old"),
-                                ]:
-                                    wandb.log({
-                                        'round': round_idx,
-                                        f'scatter/{title_suffix}': wandb.plot.scatter(
-                                            wandb.Table(
-                                                data=[[xa, xb]],
-                                                columns=[col_a, col_b]
-                                            ),
-                                            col_a, col_b,
-                                            title=f"{title_suffix} — pair ({t},{tprime})"
-                                        )
-                                    })
+                            # # Scatter plots tường minh — chỉ log ở block cuối
+                            # if block_idx == num_blocks -1:
+                            #     for (xa, xb, col_a, col_b, title_suffix) in [
+                            #         (overlap,                   old_test_acc * 100, "overlap@50",        "acc_old",  "overlap_vs_acc_old"),
+                            #         (float(cka_old),                overlap,            "cka",               "overlap",  "cka_vs_overlap"),
+                            #         (cka_vs_overlap_residual,   old_test_acc * 100, "cka_minus_overlap", "acc_old",  "residual_vs_acc_old"),
+                            #         (drift_neuron,              old_test_acc * 100, "drift_neuron",      "acc_old",  "drift_neuron_vs_acc_old"),
+                            #         (cosine_neuron,             old_test_acc * 100, "cosine_neuron",     "acc_old",  "cosine_neuron_vs_acc_old"),
+                            #         (cka_gap,                   old_test_acc * 100, "cka_gap",           "acc_old",  "cka_gap_vs_acc_old"),
+                            #     ]:
+                            #         wandb.log({
+                            #             'round': round_idx,
+                            #             f'scatter/{title_suffix}': wandb.plot.scatter(
+                            #                 wandb.Table(
+                            #                     data=[[xa, xb]],
+                            #                     columns=[col_a, col_b]
+                            #                 ),
+                            #                 col_a, col_b,
+                            #                 title=f"{title_suffix} — pair ({t},{tprime})"
+                            #             )
+                            #         })
 
-                        # ── CSV write ─────────────────────────────────────────
-                        try:
-                            line = (
-                                f'{client_id},{block_idx},{t},{tprime},'                                
-                                f'{sigma_old},{eps_old},'
-                                f'{float(cka_old)},{float(linear_cka_old)},{float(kernel_cka_old)},'
-                                f'{float(cka_curr)},{float(linear_cka_curr)},{float(kernel_cka_curr)},'
-                                f'{old_test_acc},{current_test_acc},{acc_t_on_head},{drop_acc*100},'
-                                f'{cos_logit_mean},'
-                                f'{align_score[10]},{align_score[15]},{align_score[20]},{align_score[30]},{align_score[50]},{align_score[75]},'
-                                f'{drift_neuron},{cosine_neuron},{overlap},'
-                                f'{drift_per_acc}\n'
-                            )
+                        # # ── CSV write ─────────────────────────────────────────
+                        # try:
+                        #     line = (
+                        #         f'{client_id},{block_idx},{t},{tprime},'                                
+                        #         f'{sigma_old},{eps_old},'
+                        #         f'{float(cka_old)},{float(linear_cka_old)},{float(kernel_cka_old)},'
+                        #         f'{float(cka_curr)},{float(linear_cka_curr)},{float(kernel_cka_curr)},'
+                        #         f'{old_test_acc},{current_test_acc},{acc_t_on_head},{drop_acc*100},'
+                        #         f'{cos_logit_mean},'
+                        #         f'{align_score[10]},{align_score[15]},{align_score[20]},{align_score[30]},{align_score[50]},{align_score[75]},'
+                        #         f'{drift_neuron},{cosine_neuron},{overlap},'
+                        #         f'{drift_per_acc}\n'
+                        #     )
 
-                            if 'nan' in line.lower():
-                                logger.warning(
-                                    f'[NaN DETECTED] client={client_id} '
-                                    f'block={block_idx} t={t} tp={tprime} '
-                                    f'round={round_idx}'
-                                )
+                        #     if 'nan' in line.lower():
+                        #         logger.warning(
+                        #             f'[NaN DETECTED] client={client_id} '
+                        #             f'block={block_idx} t={t} tp={tprime} '
+                        #             f'round={round_idx}'
+                        #         )
 
-                            with open(output_file, 'a') as f:
-                                f.write(line)
-                                f.flush()
+                        #     with open(output_file, 'a') as f:
+                        #         f.write(line)
+                        #         f.flush()
 
-                            if done % 50 == 0:
-                                logger.debug(f'[SAMPLE LINE] {line.strip()}')
+                        #     if done % 50 == 0:
+                        #         logger.debug(f'[SAMPLE LINE] {line.strip()}')
 
-                        except Exception as e:
-                            logger.error(
-                                f'[WRITE FAIL] client={client_id} '
-                                f'block={block_idx} t={t} tp={tprime} | {e}'
-                            )
+                        # except Exception as e:
+                        #     logger.error(
+                        #         f'[WRITE FAIL] client={client_id} '
+                        #         f'block={block_idx} t={t} tp={tprime} | {e}'
+                        #     )
 
                     except Exception as e:
                         logger.error(
@@ -834,10 +834,10 @@ def measure_all_representation_drift(args):
                         )
                         continue
 
-            # FIX: close scatter SAU khi hết vòng round, không phải trong vòng round
-            for block_idx in range(num_blocks):
-                scatters[block_idx].close()
-            logger.info(f'  └── Task pair ({t}, {tprime}) done')
+            # # FIX: close scatter SAU khi hết vòng round, không phải trong vòng round
+            # for block_idx in range(num_blocks):
+            #     scatters[block_idx].close()
+            # logger.info(f'  └── Task pair ({t}, {tprime}) done')
 
     logger.info(f'\n  Hoàn thành! CSV → {output_file}')
 
