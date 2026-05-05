@@ -583,9 +583,9 @@ def measure_all_representation_drift(args):
                         #     width_tp = compute_width(model_tprime, block_idx - 1)
 
                         # eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t_old)
-                        # sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
-                        # eps_old           = compute_eps(feat_t_old, feat_tp_old)
-                        # hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
+                        sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
+                        eps_old           = compute_eps(feat_t_old, feat_tp_old)
+                        hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
 
                         # feat_t_tensor_old  = torch.from_numpy(feat_t_old).float().to(DEVICE)
                         # feat_tp_tensor_old = torch.from_numpy(feat_tp_old).float().to(DEVICE)
@@ -605,11 +605,11 @@ def measure_all_representation_drift(args):
                         # kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
 
                         
-                        topk_list  = [10,15, 20,30,50,75]
-                        align_score = {}
-                        for k in topk_list:
-                            align_score[k], _ = compute_alignment_from_arrays(
-                                feat_t_old, feat_tp_old, "mutual_knn", topk=k, precise=True)
+                        # topk_list  = [10,15, 20,30,50,75]
+                        # align_score = {}
+                        # for k in topk_list:
+                        #     align_score[k], _ = compute_alignment_from_arrays(
+                        #         feat_t_old, feat_tp_old, "mutual_knn", topk=k, precise=True)
 
                         # # ── Derived metrics ──────────────────────────────────
                         # cka_gap                 = float(kernel_cka_curr) - float(linear_cka_curr)
@@ -732,20 +732,20 @@ def measure_all_representation_drift(args):
                                 # f'{prefix}/cka_curr': float(cka_curr),
                                 # f'{prefix}/linear_cka_curr': float(linear_cka_curr),
                                 # f'{prefix}/kernel_cka_curr': float(kernel_cka_curr),
-                                f'{prefix}/align10': align_score[10],
-                                f'{prefix}/align15': align_score[15],
-                                f'{prefix}/align20': align_score[20],
-                                f'{prefix}/align30': align_score[30],
-                                f'{prefix}/align50': align_score[50],
-                                f'{prefix}/align75': align_score[75],
+                                # f'{prefix}/align10': align_score[10],
+                                # f'{prefix}/align15': align_score[15],
+                                # f'{prefix}/align20': align_score[20],
+                                # f'{prefix}/align30': align_score[30],
+                                # f'{prefix}/align50': align_score[50],
+                                # f'{prefix}/align75': align_score[75],
                                 # f'{prefix}/eta_min_norm': eta_min_n,
                                 # f'{prefix}/eta_max_norm': eta_max_n,
 
                                 # f'{prefix}/ratio_feature': ratio_feature,
                                 # f'{prefix}/width_t': width_t,
                                 # f'{prefix}/width_tprime': width_tp,
-                                # f'{prefix}/sigma_old': sigma_old,
-                                # f'{prefix}/eps_old': eps_old,
+                                f'{prefix}/sigma_old': sigma_old,
+                                f'{prefix}/eps_old': eps_old,
                                 # f'{prefix}/sigma_curr': sigma_curr,
                                 # f'{prefix}/eps_curr': eps_curr,
                                 # f'{prefix}/gap_sigma': gap_sigma,
