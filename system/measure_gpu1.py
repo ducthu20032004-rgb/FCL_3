@@ -716,6 +716,7 @@ def measure_all_representation_drift(args):
                         # scatter.log_pair("drift_per_acc_vs_round",       round_idx,          drift_per_acc)
 
                         # ── WandB ─────────────────────────────────────────────
+                        print(">>> WANDB LOGGING", round_idx)
                         if args.use_wandb :
                             prefix = f'block{block_idx}/pair_{t}_{tprime}'
 
@@ -736,9 +737,7 @@ def measure_all_representation_drift(args):
                                 f'{prefix}/align20': align_score[20],
                                 f'{prefix}/align30': align_score[30],
                                 f'{prefix}/align50': align_score[50],
-                                f'{prefix}/align100': align_score[100],
-                                f'{prefix}/align150': align_score[150],
-
+                                f'{prefix}/align75': align_score[75],
                                 f'{prefix}/eta_min_norm': eta_min_n,
                                 f'{prefix}/eta_max_norm': eta_max_n,
 
