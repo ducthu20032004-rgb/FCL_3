@@ -21,7 +21,7 @@ def train_all_probes(
     epochs: int = 10,
     lr: float = 1e-3,
     batch_size: int = 128,
-    folder: str = "probe",
+    folder: str = "/kaggle/working",
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
     os.makedirs(folder, exist_ok=True)
