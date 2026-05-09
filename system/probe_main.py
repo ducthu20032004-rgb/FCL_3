@@ -16,11 +16,13 @@ from system.utilities_probe.utils import gpu_information_summary, set_seed
 from system.task_data_loader.scenarios import Scenario, TaskConfig ,SimpleScenario
 import wandb
 from torch.utils.data import DataLoader
-from system.utils.data_utils import read_client_data_FCL_cifar10
-
+from system.utils.data_utils import read_client_data_FCL_cifar10,read_client_data_FCL_cifar100
+from torchvision.models import ResNet18_Weights
 logger = logging.getLogger(__name__)
 def load_model(path, device):
-    model = resnet18(pretrained=False, num_classes=10)
+    # random_seed = 1609
+    # torch.manual_seed(random_seed)
+    model = resnet18(pretrained=False, num_classes=10).to(device)
     state = torch.load(path, map_location=device)
 
     # Remap keys: "base.xxx" -> "xxx", "head.xxx" -> "fc.xxx"
@@ -34,7 +36,7 @@ def load_model(path, device):
             new_state[k] = v
 
     model.load_state_dict(new_state)
-    return model.to(device).eval()
+    return model.to(device)
 def measure_probe_forgetting(args):
 
     def ckpt(client_id, task_id, round_idx):
@@ -81,7 +83,7 @@ def measure_probe_forgetting(args):
                     "client_id":        client_id,
                     "epochs_probe":     args.epochs,
                     "lr_probe":         args.lr,
-                    "classes_per_task": 2,
+                    "classes_per_task": 5,
                 },
                 reinit=True,
             )
@@ -89,9 +91,9 @@ def measure_probe_forgetting(args):
         # Build Scenario chứa tất cả task của client
         tasks = []
         for task_id in range(args.num_tasks):
-            train_ds = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=2, train=True)
-            test_ds  = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=2, train=False)
-            tasks.append(TaskConfig(train=train_ds, test=test_ds, id=str(task_id), nb_classes=2))
+            train_ds = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=5, train=True)
+            test_ds  = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=5, train=False)
+            tasks.append(TaskConfig(train=train_ds, test=test_ds, id=str(task_id), nb_classes=5))
         cl_task = SimpleScenario(tasks=tasks)
 
         for (t, tprime) in task_pairs:
@@ -136,7 +138,7 @@ def measure_probe_forgetting(args):
                     continue
 
                 model_tprime = load_model(ckpt_tprime_path, args.device)
-
+                
                 for block_idx, block_name in enumerate(BLOCK_NAMES):
                     cfg = make_training_config(
                         args,
@@ -223,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_clients", type=int, default=1)
     parser.add_argument("--num_tasks", type=int, default=5)
     parser.add_argument("--num_rounds", type=int, default=25)
-    parser.add_argument("--nb_classes", type=int, default=10)
+    parser.add_argument("--nb_classes", type=int, default=100)
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
