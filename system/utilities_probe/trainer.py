@@ -21,7 +21,7 @@ from system.utilities_probe.probes import (
     LinearProbeCIFAR10,
     ResNet18ForProbe,
     # ResNetAdapter, 
-    # LinearProbeCIFAR100, 
+    LinearProbeCIFAR100, 
     # LinearProbeSymbolCount, 
     # LinearProbeCIFAR100Task50, 
     # LinearProbeCIFAR100Task200, 
