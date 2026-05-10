@@ -123,6 +123,7 @@ def measure_probe_forgetting(args):
                     training_configs=cfg,
                     
                 )
+                set_seed(args.seed_value, n_gpu=1)  # Đảm bảo seed cố định cho baseline
                 results = probe_evaluator.probe(
                     model=model_t,
                     target_id_task=str(t),  # Chỉ probe trên task t để lấy baseline
@@ -154,6 +155,7 @@ def measure_probe_forgetting(args):
                         training_configs=cfg,
                           # Chỉ probe trên task t để lấy baseline
                     )
+                    set_seed(args.seed_value, n_gpu=1)  # Đảm bảo seed cố định cho probe tprime
                     results = probe_evaluator.probe(
                         model=model_tprime,
                         target_id_task=str(t),  # Chỉ probe trên task t để so sánh với baseline
