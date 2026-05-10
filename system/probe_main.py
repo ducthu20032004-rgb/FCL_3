@@ -7,39 +7,36 @@ import argparse
 import torch
 from torchvision.models import resnet18
 
-
 from system.utilities_probe.metrics import Accuracy, Loss
 from system.utilities_probe.configs import TrainingConfig
 from system.utilities_probe.evaluation import PredictionBasedEvaluator
 from system.utilities_probe.trainer import ProbeEvaluator
 from system.utilities_probe.utils import gpu_information_summary, set_seed
-from system.task_data_loader.scenarios import Scenario, TaskConfig ,SimpleScenario
+from system.task_data_loader.scenarios import Scenario, TaskConfig, SimpleScenario
 import wandb
 from torch.utils.data import DataLoader
-from system.utils.data_utils import read_client_data_FCL_cifar10,read_client_data_FCL_cifar100
-from torchvision.models import ResNet18_Weights
+from system.utils.data_utils import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100
+
 logger = logging.getLogger(__name__)
-BLOCK_NAMES = [ "block1", "block2", "block3", "block4"]
+BLOCK_NAMES = ["block1", "block2", "block3", "block4"]
+
+
 def load_model(path, device):
-    # random_seed = 1609
-    # torch.manual_seed(random_seed)
     model = resnet18(pretrained=False, num_classes=10).to(device)
-    
-    model.fc = torch.nn.Identity()  # Remove the final classification layer
+    model.fc = torch.nn.Identity()
     state = torch.load(path, map_location=device)
-    # Remap keys: "base.xxx" -> "xxx", "head.xxx" -> "fc.xxx"
     new_state = {}
     for k, v in state.items():
         if k.startswith("base."):
             new_state[k[len("base."):]] = v
         elif k.startswith("head."):
-            # new_state["fc." + k[len("head."):]] = v
             pass
         else:
             new_state[k] = v
-
-    model.load_state_dict(new_state,strict=False)
+    model.load_state_dict(new_state, strict=False)
     return model.to(device)
+
+
 def measure_probe_forgetting(args):
 
     def ckpt(client_id, task_id, round_idx):
@@ -49,7 +46,6 @@ def measure_probe_forgetting(args):
         )
 
     def make_training_config(args, experiment_name):
-        """Tạo TrainingConfig — fix bug seed_value khai báo 2 lần"""
         return TrainingConfig(
             prediction_evaluator=PredictionBasedEvaluator(
                 metrics=[Accuracy(), Loss()],
@@ -69,7 +65,7 @@ def measure_probe_forgetting(args):
         )
 
     task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
-    csv_rows   = []
+    csv_rows = []
 
     for client_id in range(args.num_clients):
         logger.info("=" * 65)
@@ -78,11 +74,11 @@ def measure_probe_forgetting(args):
 
         if args.use_wandb:
             wandb.init(
-                project = "Representation Drift Measurement",
-                entity  = "ducthu2003",
-                name    = f"client{client_id}_linear_probe",
-                group   = f"linear_probe_client{client_id}",
-                config  = {
+                project="Representation Drift Measurement",
+                entity="ducthu2003",
+                name=f"client{client_id}_linear_probe",
+                group=f"linear_probe_client{client_id}",
+                config={
                     "client_id":        client_id,
                     "epochs_probe":     args.epochs,
                     "lr_probe":         args.lr,
@@ -91,7 +87,7 @@ def measure_probe_forgetting(args):
                 reinit=True,
             )
 
-        # Build Scenario chứa tất cả task của client
+        # Build Scenario
         tasks = []
         for task_id in range(args.num_tasks):
             train_ds = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=2, train=True)
@@ -99,18 +95,20 @@ def measure_probe_forgetting(args):
             tasks.append(TaskConfig(train=train_ds, test=test_ds, id=str(task_id), nb_classes=2))
         cl_task = SimpleScenario(tasks=tasks)
 
-        for (t, tprime) in task_pairs:
-            logger.info(f"  Task pair  t={t} (cũ)  tprime={tprime} (mới)")
+        # ── Probe baseline 1 lần duy nhất cho mỗi task ──────────────────────
+        # baseline_acc_per_task[t][block_name] = float
+        baseline_acc_per_task = {}
 
-            # ── Bước 1: tính baseline acc dùng model_t ──────────────────────
+        for t in range(args.num_tasks):
             ckpt_t_path = ckpt(client_id, t, round_idx=24)
             if not os.path.isfile(ckpt_t_path):
                 logger.error(f"  [MISSING baseline] {ckpt_t_path}")
                 continue
 
+            logger.info(f"  [Baseline] Probing model_t for task t={t}")
             model_t = load_model(ckpt_t_path, args.device)
+            baseline_acc_per_task[t] = {}
 
-            baseline_acc_per_block = {}   # block_name -> float
             for block_idx, block_name in enumerate(BLOCK_NAMES):
                 cfg = make_training_config(
                     args,
@@ -121,20 +119,29 @@ def measure_probe_forgetting(args):
                     data_stream=cl_task,
                     half_precision=True,
                     training_configs=cfg,
-                    
                 )
-                set_seed(args.seed_value, n_gpu=1)  # Đảm bảo seed cố định cho baseline
+                set_seed(args.seed_value, n_gpu=1)
                 results = probe_evaluator.probe(
                     model=model_t,
-                    target_id_task=str(t),  # Chỉ probe trên task t để lấy baseline
+                    target_id_task=str(t),
                     probe_caller=f"client{client_id}_task{t}_block{block_idx}_baseline",
                 )
                 block_results = results[block_name]
-                print("DEBUG block_results:", block_results) 
-                baseline_acc_per_block[block_name] = block_results[f"task_{t}"]
-                logger.info(f"    [baseline] block={block_name}  acc={baseline_acc_per_block[block_name]:.4f}")
+                print("DEBUG baseline block_results:", block_results)
+                baseline_acc_per_task[t][block_name] = block_results[f"task_{t}"]
+                logger.info(
+                    f"    [baseline] t={t} block={block_name}"
+                    f"  acc={baseline_acc_per_task[t][block_name]:.4f}"
+                )
 
-            # ── Bước 2: qua từng round, probe model_tprime trên data task t ─
+        # ── Dùng baseline đã lưu trong task_pairs loop ───────────────────────
+        for (t, tprime) in task_pairs:
+            logger.info(f"  Task pair  t={t} (cũ)  tprime={tprime} (mới)")
+
+            if t not in baseline_acc_per_task:
+                logger.error(f"  [SKIP] No baseline for t={t}, skipping pair ({t},{tprime})")
+                continue
+
             for round_idx in range(args.num_rounds):
                 ckpt_tprime_path = ckpt(client_id, tprime, round_idx)
                 if not os.path.isfile(ckpt_tprime_path):
@@ -142,7 +149,7 @@ def measure_probe_forgetting(args):
                     continue
 
                 model_tprime = load_model(ckpt_tprime_path, args.device)
-                
+
                 for block_idx, block_name in enumerate(BLOCK_NAMES):
                     cfg = make_training_config(
                         args,
@@ -153,37 +160,39 @@ def measure_probe_forgetting(args):
                         data_stream=cl_task,
                         half_precision=True,
                         training_configs=cfg,
-                          # Chỉ probe trên task t để lấy baseline
                     )
-                    set_seed(args.seed_value, n_gpu=1)  # Đảm bảo seed cố định cho probe tprime
+                    set_seed(args.seed_value, n_gpu=1)
                     results = probe_evaluator.probe(
                         model=model_tprime,
-                        target_id_task=str(t),  # Chỉ probe trên task t để so sánh với baseline
+                        target_id_task=str(t),
                         probe_caller=f"client{client_id}_task{t}_block{block_idx}_round{round_idx}",
                     )
 
                     block_results = results[block_name]
-                    print("DEBUG block_results:", block_results) 
-                    acc_tprime = block_results[f"task_{t}"]
-                    forgetting = baseline_acc_per_block[block_name] - acc_tprime
-                    
+                    print("DEBUG tprime block_results:", block_results)
+                    acc_tprime  = block_results[f"task_{t}"]
+
+                    # Dùng baseline đã lưu sẵn — không probe lại
+                    baseline    = baseline_acc_per_task[t][block_name]
+                    forgetting  = baseline - acc_tprime
+
                     logger.info(
                         f"    round={round_idx:02d}  block={block_name}"
-                        f"  block_acc_baseline={baseline_acc_per_block[block_name]:.4f}"
-                        f"  block_acc_{tprime}={acc_tprime:.4f}"
+                        f"  baseline={baseline:.4f}"
+                        f"  acc_tprime={acc_tprime:.4f}"
                         f"  forgetting={forgetting:.4f}"
                     )
 
                     row = {
-                        "client":         client_id,
-                        "task_t":         t,
-                        "task_tprime":    tprime,
-                        "round":          round_idx,
-                        "block_idx":      block_idx,
-                        "block_name":     block_name,
-                        "block_acc_baseline":   baseline_acc_per_block[block_name],
-                        "block_acc_tprime":     acc_tprime,
-                        "forgetting":     forgetting,
+                        "client":             client_id,
+                        "task_t":             t,
+                        "task_tprime":        tprime,
+                        "round":              round_idx,
+                        "block_idx":          block_idx,
+                        "block_name":         block_name,
+                        "block_acc_baseline": baseline,
+                        "block_acc_tprime":   acc_tprime,
+                        "forgetting":         forgetting,
                     }
                     csv_rows.append(row)
 
@@ -201,16 +210,14 @@ def measure_probe_forgetting(args):
 
 
 def main(args):
-    
     n_gpu, device = gpu_information_summary()
-    set_seed(args.seed_value,  n_gpu=n_gpu)
+    set_seed(args.seed_value, n_gpu=n_gpu)
     args.device = device
     logger.info(f"Using device: {device} with {n_gpu} GPU(s)")
     if args.use_wandb:
         wandb.init(project="FCL-probe", config=vars(args))
     rows = measure_probe_forgetting(args)
 
-    # Lưu CSV kết quả
     import csv
     out_path = os.path.join(args.saving_dir, "probe_forgetting_results.csv")
     if rows:
@@ -220,34 +227,26 @@ def main(args):
             writer.writerows(rows)
         logger.info(f"Saved results to {out_path}")
 
+
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser()
-
     parser.add_argument("--saving_dir", type=str,
                         default="C:/Thu/FCL/checkpoint/weightAVGClient0")
-
     parser.add_argument("--num_clients", type=int, default=1)
-    parser.add_argument("--num_tasks", type=int, default=5)
-    parser.add_argument("--num_rounds", type=int, default=25)
-    parser.add_argument("--nb_classes", type=int, default=10)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--num_tasks",   type=int, default=5)
+    parser.add_argument("--num_rounds",  type=int, default=25)
+    parser.add_argument("--nb_classes",  type=int, default=10)
+    parser.add_argument("--epochs",      type=int, default=100)
+    parser.add_argument("--batch_size",  type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
-
-    parser.add_argument("--lr", type=float, default=0.001)
-
-    parser.add_argument("--seed_value", type=int, default=42)
-
-    parser.add_argument("--use_wandb", action="store_true")
-
+    parser.add_argument("--lr",          type=float, default=0.001)
+    parser.add_argument("--seed_value",  type=int, default=42)
+    parser.add_argument("--use_wandb",   action="store_true")
     args = parser.parse_args()
 
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
-
     pprint(vars(args))
-
     main(args)
