@@ -549,6 +549,8 @@ class ModelCoach:
     #     self.config.loggers = [io_logger, tb_logger]
 
     def save_model(self, task_id: str):
+        # Tạm thời skip 
+        return
         if self.config.verbose:
             print(f"   Training on task {task_id} is over.\n      ^^^Saving model.^^^")
         torch.save(
