@@ -263,7 +263,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed_value",  type=int, default=42)
     parser.add_argument("--use_wandb",   action="store_true")
     parser.add_argument("--dir_probe_cache", type=str, default="C:\\Thu\\FCL\\probe_cache_head")
-    parser.add_argument("--num_workers", type=int, default=0)
+
     args = parser.parse_args()
 
     logging.basicConfig(
