@@ -69,13 +69,17 @@ class LinearProbeCIFAR10(nn.Module):
         for block_values in self.under_investigation_blocks.values():
             for parameters in block_values.parameters():
                 parameters.requires_grad = False
-
-        # Tạo head riêng cho từng task
-        self.heads = nn.ModuleDict()
-        for i in range(num_tasks):
-            head = nn.Linear(self.in_channel, 10)  # 10 classes/task với CIFAR10 FCL
-            xavier_uniform_initialize(head)
-            self.heads[f'task_{i}'] = head
+        self._printed_task = set()
+        self.fc_task0 = nn.Linear(self.in_channel, 10)
+        self.fc_task1 = nn.Linear(self.in_channel, 10)
+        self.fc_task2 = nn.Linear(self.in_channel, 10)
+        self.fc_task3 = nn.Linear(self.in_channel, 10)
+        self.fc_task4 = nn.Linear(self.in_channel, 10)
+        xavier_uniform_initialize(self.fc_task0)
+        xavier_uniform_initialize(self.fc_task1)   
+        xavier_uniform_initialize(self.fc_task2)
+        xavier_uniform_initialize(self.fc_task3)
+        xavier_uniform_initialize(self.fc_task4)
 
     def forward(self, features: Tensor, task_id):
         for block_name, operations in self.under_investigation_blocks.items():
@@ -85,8 +89,34 @@ class LinearProbeCIFAR10(nn.Module):
         features = F.adaptive_avg_pool2d(features, (1, 1))
         features = torch.flatten(features, 1)
         
-        task_key = f'task_{task_id}' if not str(task_id).startswith('task_') else task_id
-        return self.heads[task_key](features)
+        if task_id == "0":
+            if "0" not in self._printed_task:
+                print("Using head for task 0")
+                self._printed_task.add("0")
+            features = self.fc_task0(features)
+        elif task_id == "1":
+            if "1" not in self._printed_task:
+                print("Using head for task 1")
+                self._printed_task.add("1")
+            features = self.fc_task1(features)
+        elif task_id == "2":
+            if "2" not in self._printed_task:
+                print("Using head for task 2")
+                self._printed_task.add("2")
+            features = self.fc_task2(features)
+        elif task_id == "3":
+            if "3" not in self._printed_task:
+                print("Using head for task 3")
+                self._printed_task.add("3")
+            features = self.fc_task3(features)
+        elif task_id == "4":
+            if "4" not in self._printed_task:
+                print("Using head for task 4")
+                self._printed_task.add("4")
+            features = self.fc_task4(features)
+        else:
+            raise ValueError(f"Invalid task_id: {task_id}. Expected values are between 0 and 4.")
+        return features
 
 class LinearProbeCIFAR100(nn.Module):
     def __init__(

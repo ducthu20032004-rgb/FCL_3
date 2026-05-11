@@ -272,8 +272,13 @@ class ModelCoach:
                     self.running_loss = 0.0
                     self.train_task(task_training=task.train, task_id=task_id, encoder_only=False)
             logger.debug(f'Training with {self.task_num} is done')
-            evaluator_results = self.config.prediction_evaluator.eval_all_tasks(
-                model=self.model, data_stream=self.data_stream
+
+            # Cách cũ
+            # evaluator_results = self.config.prediction_evaluator.eval_all_tasks(
+            #     model=self.model, data_stream=self.data_stream
+            # )
+            evaluator_results = self.config.prediction_evaluator.eval_one_task(
+                model=self.model, task=task.test, task_id=task_id
             )
             logger.debug(f'evaluator_results\n\t{evaluator_results}')
             for metric_name, metric_value_dict in evaluator_results.items():

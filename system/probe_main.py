@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader
 from system.utils.data_utils import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100
 
 logger = logging.getLogger(__name__)
-BLOCK_NAMES = ["block1", "block2", "block3", "block4"]
+BLOCK_NAMES = ["block0", "block1", "block2", "block3", "block4"]
 
 
 def load_model(path, device):
@@ -65,6 +65,7 @@ def measure_probe_forgetting(args):
         )
 
     task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
+    
     csv_rows = []
 
     for client_id in range(args.num_clients):
@@ -109,24 +110,42 @@ def measure_probe_forgetting(args):
             model_t = load_model(ckpt_t_path, args.device)
             baseline_acc_per_task[t] = {}
 
+
+            PROBE_CACHE_DIR = args.dir_probe_cache
+            os.makedirs(PROBE_CACHE_DIR, exist_ok=True)
+
             for block_idx, block_name in enumerate(BLOCK_NAMES):
-                cfg = make_training_config(
-                    args,
-                    experiment_name=f"client{client_id}_t{t}_block{block_idx}_baseline",
-                )
-                probe_evaluator = ProbeEvaluator(
-                    blocks_to_prob=[block_name],
-                    data_stream=cl_task,
-                    half_precision=True,
-                    training_configs=cfg,
-                )
-                set_seed(args.seed_value, n_gpu=1)
-                results = probe_evaluator.probe(
-                    model=model_t,
-                    target_id_task=str(t),
-                    probe_caller=f"client{client_id}_task{t}_block{block_idx}_baseline",
-                )
-                block_results = results[block_name]
+                cache_key = f"client{client_id}_t{t}_block{block_name}"
+                cache_path = os.path.join(PROBE_CACHE_DIR, f"{cache_key}.pt")
+
+                if os.path.exists(cache_path):
+                    # Load cached result
+                    cached = torch.load(cache_path)
+                    block_results = cached["block_results"]
+                    logger.info(f"    [baseline] t={t} block={block_name} CACHE HIT  acc={block_results[f'task_{t}']:.4f}")
+                else:
+                    # Train probe normally
+                    cfg = make_training_config(
+                        args,
+                        experiment_name=f"client{client_id}_t{t}_block{block_idx}_baseline",
+                    )
+                    probe_evaluator = ProbeEvaluator(
+                        blocks_to_prob=[block_name],
+                        data_stream=cl_task,
+                        half_precision=True,
+                        training_configs=cfg,
+                    )
+                    set_seed(args.seed_value, n_gpu=1)
+                    results = probe_evaluator.probe(
+                        model=model_t,
+                        target_id_task=str(t),
+                        probe_caller=f"client{client_id}_task{t}_block{block_idx}_baseline",
+                    )
+                    block_results = results[block_name]
+
+                    # Cache the result dict
+                    torch.save({"block_results": block_results}, cache_path)
+                    logger.info(f"    [baseline] t={t} block={block_name} TRAINED+CACHED")
                 print("DEBUG baseline block_results:", block_results)
                 baseline_acc_per_task[t][block_name] = block_results[f"task_{t}"]
                 logger.info(
@@ -142,7 +161,7 @@ def measure_probe_forgetting(args):
                 logger.error(f"  [SKIP] No baseline for t={t}, skipping pair ({t},{tprime})")
                 continue
 
-            for round_idx in range(args.num_rounds):
+            for round_idx in range(25):
                 ckpt_tprime_path = ckpt(client_id, tprime, round_idx)
                 if not os.path.isfile(ckpt_tprime_path):
                     logger.warning(f"  [MISSING] {ckpt_tprime_path}, skip round {round_idx}")
@@ -198,8 +217,9 @@ def measure_probe_forgetting(args):
 
                     if args.use_wandb:
                         wandb.log({
-                            f"{block_name}/forgetting/t{t}_tprime{tprime}": forgetting,
-                            f"{block_name}/acc_tprime/t{t}_tprime{tprime}": acc_tprime,
+                            f"{block_name}/forgetting/pair{t}_{tprime}": forgetting,
+                            f"{block_name}/acc_tprime/pair{t}_{tprime}": acc_tprime,
+                            f'{block_name}/baseline/pair{t}_{tprime}': baseline,
                             "round": round_idx,
                         })
 
@@ -242,6 +262,8 @@ if __name__ == "__main__":
     parser.add_argument("--lr",          type=float, default=0.001)
     parser.add_argument("--seed_value",  type=int, default=42)
     parser.add_argument("--use_wandb",   action="store_true")
+    parser.add_argument("--dir_probe_cache", type=str, default="C:\\Thu\\FCL\\probe_cache_head")
+    parser.add_argument("--num_workers", type=int, default=0)
     args = parser.parse_args()
 
     logging.basicConfig(
