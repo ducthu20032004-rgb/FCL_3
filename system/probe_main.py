@@ -53,7 +53,7 @@ def measure_probe_forgetting(args):
             patience=args.patience,
             verbose=True,
             delta=0.001,
-            directory=os.path.join(args.saving_dir, "early_stop_ckpts"),
+            directory="/kaggle/working/early_stopping_checkpoints",
         )
         
         return TrainingConfig(
