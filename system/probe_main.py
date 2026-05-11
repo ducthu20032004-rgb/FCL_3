@@ -6,7 +6,7 @@ import argparse
 
 import torch
 from torchvision.models import resnet18
-
+from system.utilities_probe.utils import EarlyStoppingConfig
 from system.utilities_probe.metrics import Accuracy, Loss
 from system.utilities_probe.configs import TrainingConfig
 from system.utilities_probe.evaluation import PredictionBasedEvaluator
@@ -46,6 +46,16 @@ def measure_probe_forgetting(args):
         )
 
     def make_training_config(args, experiment_name):
+        safe_name = experiment_name.replace("/", "_")
+        
+        early_stop_cfg = EarlyStoppingConfig(
+            model_name=safe_name,
+            patience=args.patience,
+            verbose=True,
+            delta=0.001,
+            directory=os.path.join(args.saving_dir, "early_stop_ckpts"),
+        )
+        
         return TrainingConfig(
             prediction_evaluator=PredictionBasedEvaluator(
                 metrics=[Accuracy(), Loss()],
@@ -57,7 +67,7 @@ def measure_probe_forgetting(args):
             num_workers=args.num_workers,
             batch_size=args.batch_size,
             logging_step=4000,
-            early_stopping_config=None,
+            early_stopping_config=early_stop_cfg,
             is_probe=True,
             save_progress=True,
             saving_dir=args.saving_dir,
@@ -263,7 +273,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed_value",  type=int, default=42)
     parser.add_argument("--use_wandb",   action="store_true")
     parser.add_argument("--dir_probe_cache", type=str, default="C:\\Thu\\FCL\\probe_cache_head")
-
+    parser.add_argument("--patience", type=int, default=5)
     args = parser.parse_args()
 
     logging.basicConfig(
