@@ -137,7 +137,7 @@ def measure_probe_forgetting(args):
         # baseline_acc_per_task[t][block_name] = float
         baseline_acc_per_task = {}
 
-        for t in range(1):
+        for t in range(args.num_tasks):
             ckpt_t_path = ckpt(client_id, t, round_idx=args.num_rounds)  # Chọn round_idx=15 làm baseline, có thể điều chỉnh tùy ý
             if not os.path.isfile(ckpt_t_path):
                 logger.error(f"  [MISSING baseline] {ckpt_t_path}")
