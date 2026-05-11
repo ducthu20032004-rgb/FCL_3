@@ -111,7 +111,7 @@ def measure_probe_forgetting(args):
         baseline_acc_per_task = {}
 
         for t in range(args.num_tasks):
-            ckpt_t_path = ckpt(client_id, t, round_idx=15)  # Chọn round_idx=15 làm baseline, có thể điều chỉnh tùy ý
+            ckpt_t_path = ckpt(client_id, t, round_idx=args.num_rounds)  # Chọn round_idx=15 làm baseline, có thể điều chỉnh tùy ý
             if not os.path.isfile(ckpt_t_path):
                 logger.error(f"  [MISSING baseline] {ckpt_t_path}")
                 continue
@@ -171,7 +171,7 @@ def measure_probe_forgetting(args):
                 logger.error(f"  [SKIP] No baseline for t={t}, skipping pair ({t},{tprime})")
                 continue
 
-            for round_idx in range(15):
+            for round_idx in range(args.num_rounds + 1):
                 ckpt_tprime_path = ckpt(client_id, tprime, round_idx)
                 if not os.path.isfile(ckpt_tprime_path):
                     logger.warning(f"  [MISSING] {ckpt_tprime_path}, skip round {round_idx}")
