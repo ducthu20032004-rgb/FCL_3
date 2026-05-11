@@ -6,6 +6,7 @@ import argparse
 
 import torch
 from torchvision.models import resnet18
+from wandb.util import np
 from system.utilities_probe.utils import EarlyStoppingConfig
 from system.utilities_probe.metrics import Accuracy, Loss
 from system.utilities_probe.configs import TrainingConfig
@@ -14,15 +15,38 @@ from system.utilities_probe.trainer import ProbeEvaluator
 from system.utilities_probe.utils import gpu_information_summary, set_seed
 from system.task_data_loader.scenarios import Scenario, TaskConfig, SimpleScenario
 import wandb
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from system.utils.data_utils import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100
-
+from numpy import load
 logger = logging.getLogger(__name__)
 BLOCK_NAMES = ["block0", "block1", "block2", "block3", "block4"]
 
+class RemappedDataset(Dataset):
+    def __init__(self, dataset, client_id: int, task_id: int, classes_per_task: int = 2):
+        self.dataset = dataset
+        
+        all_class_orders = np.load(
+            './dataset/class_order/class_order_cifar10.npy', 
+            allow_pickle=True
+        )
+        # Lấy đúng client, chỉ lấy 10 class đầu (bỏ phần lặp lại)
+        client_order = all_class_orders[client_id][:10]
+        
+        start = task_id * classes_per_task
+        task_classes = client_order[start : start + classes_per_task]
+        
+        self.label_map = {int(orig): new for new, orig in enumerate(task_classes)}
+        print(f"[RemappedDataset] client={client_id} task={task_id} "
+              f"classes={task_classes.tolist()} map={self.label_map}")
 
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        x, y = self.dataset[idx]
+        return x, self.label_map[int(y)]
 def load_model(path, device):
-    model = resnet18(pretrained=False, num_classes=10).to(device)
+    model = resnet18(pretrained=False, num_classes=2).to(device)
     model.fc = torch.nn.Identity()
     state = torch.load(path, map_location=device)
     new_state = {}
@@ -103,6 +127,9 @@ def measure_probe_forgetting(args):
         for task_id in range(args.num_tasks):
             train_ds = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=2, train=True)
             test_ds  = read_client_data_FCL_cifar10(client_id, task=task_id, classes_per_task=2, train=False)
+                # ✅ Remap label theo đúng class_order
+            train_ds = RemappedDataset(train_ds, client_id=client_id, task_id=task_id, classes_per_task=2)
+            test_ds  = RemappedDataset(test_ds, client_id=client_id, task_id=task_id, classes_per_task=2)
             tasks.append(TaskConfig(train=train_ds, test=test_ds, id=str(task_id), nb_classes=2))
         cl_task = SimpleScenario(tasks=tasks)
 
@@ -110,7 +137,7 @@ def measure_probe_forgetting(args):
         # baseline_acc_per_task[t][block_name] = float
         baseline_acc_per_task = {}
 
-        for t in range(args.num_tasks):
+        for t in range(1):
             ckpt_t_path = ckpt(client_id, t, round_idx=args.num_rounds)  # Chọn round_idx=15 làm baseline, có thể điều chỉnh tùy ý
             if not os.path.isfile(ckpt_t_path):
                 logger.error(f"  [MISSING baseline] {ckpt_t_path}")
@@ -272,7 +299,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr",          type=float, default=0.001)
     parser.add_argument("--seed_value",  type=int, default=42)
     parser.add_argument("--use_wandb",   action="store_true")
-    parser.add_argument("--dir_probe_cache", type=str, default="C:\\Thu\\FCL\\probe_cache_head")
+    parser.add_argument("--dir_probe_cache", type=str, default="./probe_cache")
     parser.add_argument("--patience", type=int, default=5)
     args = parser.parse_args()
 

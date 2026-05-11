@@ -144,7 +144,7 @@ class ProbeEvaluator:
         #     probing_model = LinearProbeComplexSymbolCount(under_investigation_model=model, intended_block=block)
         else:
             raise TypeError("Model is not of a type supported by the probe.")
-
+        probing_model.reset_head(task_id=target_id_task)
         trainer = ModelCoach(
             model=probing_model,
             data_stream=self.data_stream,
@@ -450,7 +450,7 @@ class ModelCoach:
                     #     metric_name = f'EvaluateAfterIter_{metric_name}'
                     self.log(metric_name=metric_name, metric_value=metric_value_dict)
                 end_time_eval = time.time()
-                print(f"Evaluation took: {end_time_eval - start_time_eval}s.")
+                #print(f"Evaluation took: {end_time_eval - start_time_eval}s.")
 
             if 0 < self.config.max_steps == self.global_step:
                 break
