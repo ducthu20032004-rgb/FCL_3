@@ -198,7 +198,7 @@ def measure_probe_forgetting(args):
                 logger.error(f"  [SKIP] No baseline for t={t}, skipping pair ({t},{tprime})")
                 continue
 
-            for round_idx in range(args.num_rounds + 1):
+            for round_idx in [5, 10, 15]:  # Chọn một vài round_idx để đo forgetting theo thời gian, có thể điều chỉnh tùy ý
                 ckpt_tprime_path = ckpt(client_id, tprime, round_idx)
                 if not os.path.isfile(ckpt_tprime_path):
                     logger.warning(f"  [MISSING] {ckpt_tprime_path}, skip round {round_idx}")
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_tasks",   type=int, default=5)
     parser.add_argument("--num_rounds",  type=int, default=15)
     parser.add_argument("--nb_classes",  type=int, default=10)
-    parser.add_argument("--epochs",      type=int, default=100)
+    parser.add_argument("--epochs",      type=int, default=30)
     parser.add_argument("--batch_size",  type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--lr",          type=float, default=0.001)
