@@ -163,26 +163,29 @@ class LinearProbeCIFAR10(nn.Module):
 
         self._printed_task = set()
 
-        # Khởi tạo heads như cũ
-        self.fc_task0 = nn.Linear(self.in_channel, 2)
-        self.fc_task1 = nn.Linear(self.in_channel, 2)
-        self.fc_task2 = nn.Linear(self.in_channel, 2)
-        self.fc_task3 = nn.Linear(self.in_channel, 2)
-        self.fc_task4 = nn.Linear(self.in_channel, 2)
+        # # Khởi tạo heads như cũ
+        # self.fc_task0 = nn.Linear(self.in_channel, 2)
+        # self.fc_task1 = nn.Linear(self.in_channel, 2)
+        # self.fc_task2 = nn.Linear(self.in_channel, 2)
+        # self.fc_task3 = nn.Linear(self.in_channel, 2)
+        # self.fc_task4 = nn.Linear(self.in_channel, 2)
 
-        self._heads = {
-            "0": self.fc_task0,
-            "1": self.fc_task1,
-            "2": self.fc_task2,
-            "3": self.fc_task3,
-            "4": self.fc_task4,
-        }
-
+        # self._heads = {
+        #     "0": self.fc_task0,
+        #     "1": self.fc_task1,
+        #     "2": self.fc_task2,
+        #     "3": self.fc_task3,
+        #     "4": self.fc_task4,
+        # }
+        self._heads = nn.ModuleDict({
+            str(i): nn.Linear(self.in_channel, 2) for i in range(num_tasks)
+        })
         for head in self._heads.values():
             xavier_uniform_initialize(head)
 
     def reset_head(self, task_id: str):
-        head = self._heads.get(task_id)
+        #head = self._heads.get(task_id)
+        head = self._heads[task_id]
         if head is None:
             raise ValueError(f"Invalid task_id: {task_id}")
         xavier_uniform_initialize(head)
@@ -197,14 +200,14 @@ class LinearProbeCIFAR10(nn.Module):
                 break
 
         features = F.adaptive_avg_pool2d(features, (1, 1))
-        features = torch.flatten(features, 1)
+        features = torch.flatten(features, 1).detach()
 
-        head = self._heads.get(task_id)
-        if head is None:
+        # head = self._heads.get(task_id)
+        if self._heads[task_id] is None:
             raise ValueError(f"Invalid task_id: {task_id}. Expected 0-4.")
 
         if task_id not in self._printed_task:
             print(f"Using head for task {task_id}")
             self._printed_task.add(task_id)
 
-        return head(features)
+        return self._heads[task_id](features)

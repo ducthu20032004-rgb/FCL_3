@@ -34,6 +34,7 @@ class RemappedDataset(Dataset):
             allow_pickle=True
         )
         client_order = all_class_orders[client_id][:10]
+        #print(all_class_orders[client_id][:10])
         start = task_id * classes_per_task
         task_classes = client_order[start: start + classes_per_task]
         self.label_map = {int(orig): new for new, orig in enumerate(task_classes)}
@@ -64,8 +65,25 @@ def load_model(path, device):
     return model.to(device)
 
 
+def load_cached_acc(cache_path, task_id):
+    """
+    Đọc acc từ cache, tương thích cả 2 format:
+      - Format cũ: {"block_results": {"task_0": 0.85, ...}}
+      - Format mới: {"acc": 0.85}
+    """
+    cached = torch.load(cache_path, map_location="cpu")
+    if "block_results" in cached:
+        # Format cũ — đúng như code version 1
+        return cached["block_results"][f"task_{task_id}"]
+    elif "acc" in cached:
+        # Format mới — code version 2
+        return cached["acc"]
+    else:
+        raise KeyError(f"Không nhận ra format cache tại {cache_path}. Keys: {list(cached.keys())}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Core: 1 probe = 1 task = 1 model  (follow design gốc)
+# Core: 1 probe = 1 task = 1 model
 # ─────────────────────────────────────────────────────────────────────────────
 
 def probe_single_task(
@@ -78,17 +96,14 @@ def probe_single_task(
     args,
 ) -> float:
     """
-    Follow đúng design gốc của paper:
-      - Scenario chỉ chứa đúng 1 task (target_task_id)
-        → giống cl_task.choose_task(target_task) trong main_probe.py gốc
-      - ProbeEvaluator + TrainingConfig + optimizer tạo mới hoàn toàn
-      → Không có shared state, không có multi-head, không có optimizer leak
+    Probe 1 block của 1 model trên 1 task duy nhất.
+    Scenario chỉ chứa đúng target_task_id → không có multi-head leak,
+    không có optimizer shared state.
     """
-    # Scenario 1 task duy nhất — đúng như choose_task() gốc
     train_ds = read_client_data_FCL_cifar10(
-        client_id, task=target_task_id, classes_per_task=2, train=True)
+        client_id, task=target_task_id,ratio = 1, classes_per_task=2, train=True)
     test_ds = read_client_data_FCL_cifar10(
-        client_id, task=target_task_id, classes_per_task=2, train=False)
+        client_id, task=target_task_id, ratio= 1, classes_per_task=2, train=False)
     train_ds = RemappedDataset(
         train_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
     test_ds = RemappedDataset(
@@ -102,14 +117,16 @@ def probe_single_task(
             nb_classes=2,
         )
     ])
-
-    # Config + optimizer mới hoàn toàn mỗi lần gọi
+    set_seed(args.seed_value, n_gpu=1)
     early_stop_cfg = EarlyStoppingConfig(
         model_name=experiment_name.replace("/", "_"),
         patience=args.patience,
         verbose=True,
         delta=0.001,
-        directory="/kaggle/working/early_stopping_checkpoints",
+        directory=os.path.join(
+            "/probe_weightcheck/early_stopping_checkpoints",
+            experiment_name.replace("/", "_")  # ← unique per probe
+        ),
     )
     cfg = TrainingConfig(
         prediction_evaluator=PredictionBasedEvaluator(
@@ -127,18 +144,18 @@ def probe_single_task(
         save_progress=False,
         saving_dir=args.saving_dir,
         experiment_name=experiment_name,
-        optimizer=None,  # → ProbeEvaluator tự tạo AdamW mới
-        # optimizer=None (default) → ModelCoach tự tạo AdamW mới
+        optimizer=None,  # ModelCoach tự tạo AdamW mới mỗi lần
     )
-
+    
     probe_evaluator = ProbeEvaluator(
         blocks_to_prob=[block_name],
         data_stream=scenario,
         half_precision=True,
         training_configs=cfg,
+        
     )
 
-    set_seed(args.seed_value, n_gpu=1)
+    
 
     results = probe_evaluator.probe(
         model=model,
@@ -162,6 +179,7 @@ def measure_probe_forgetting(args):
         )
 
     task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
+    #task_pairs = [(0, 1),(0,2),(0,3),(0,4)]
     CACHE_DIR = args.dir_probe_cache
     os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -184,26 +202,27 @@ def measure_probe_forgetting(args):
 
         # ── BASELINE ─────────────────────────────────────────────────────────
         # Probe task t trên model_t_round{num_rounds}
-        # → đo "upper bound" accuracy khi backbone vừa học xong task t
         baseline_acc = {}   # [t][block_name] = float
 
-        for t in range(args.num_tasks):
+        for t in range(4):
             path = ckpt_path(client_id, t, args.num_rounds)
             if not os.path.isfile(path):
                 logger.error(f"  [MISSING baseline] {path}")
                 continue
 
-            model_t = load_model(path, args.device)  # model mới cho mỗi t
+            model_t = load_model(path, args.device)
             baseline_acc[t] = {}
 
-            for block_name in BLOCK_NAMES:
+            for block_name in ["block4"]:
+                # Tên cache giữ nguyên như version cũ để tương thích
                 cache_file = os.path.join(
                     CACHE_DIR,
-                    f"baseline_c{client_id}_t{t}_{block_name}.pt"
+                    f"client{client_id}_t{t}_block{block_name}.pt"
                 )
 
                 if os.path.exists(cache_file):
-                    acc = torch.load(cache_file)["acc"]
+                    # Đọc cache, tương thích cả format cũ lẫn mới
+                    acc = load_cached_acc(cache_file, task_id=t)
                     logger.info(
                         f"  [baseline CACHE] t={t} {block_name} acc={acc:.4f}")
                 else:
@@ -216,32 +235,34 @@ def measure_probe_forgetting(args):
                         experiment_name=f"baseline_c{client_id}_t{t}_{block_name}",
                         args=args,
                     )
-                    torch.save({"acc": acc}, cache_file)
+                    # Lưu theo format cũ {"block_results": {"task_t": acc}}
+                    # để hoàn toàn tương thích với cache đã có sẵn
+                    torch.save(
+                        {"block_results": {f"task_{t}": acc}},
+                        cache_file
+                    )
                     logger.info(
                         f"  [baseline TRAINED] t={t} {block_name} acc={acc:.4f}")
 
                 baseline_acc[t][block_name] = acc
 
         # ── FORGETTING ───────────────────────────────────────────────────────
-        # Probe task t trên model_tprime_round{r}
-        # → đo "degraded" accuracy sau khi backbone đã học task tprime
         for (t, tprime) in task_pairs:
             if t not in baseline_acc:
                 logger.error(f"  [SKIP] No baseline t={t}")
                 continue
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
-
-            for round_idx in [5,10,11,12,13,14,15,20]:
+            total_forgetting = 0.0  # Trung bình trên tất cả block
+            for round_idx in range(3):
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")
                     continue
 
-                # Model mới cho mỗi (tprime, round_idx)
                 model_tprime = load_model(path, args.device)
 
-                for block_name in BLOCK_NAMES:
+                for block_name in ["block4"]:
                     acc_after = probe_single_task(
                         model=model_tprime,
                         client_id=client_id,
@@ -258,14 +279,16 @@ def measure_probe_forgetting(args):
                         args=args,
                     )
 
-                    baseline  = baseline_acc[t][block_name]
+                    baseline   = baseline_acc[t][block_name]
                     forgetting = baseline - acc_after
-
+                    total_forgetting += forgetting  # Trung bình trên 1 block duy nhất
+                    
                     logger.info(
                         f"    round={round_idx:02d} {block_name}"
                         f"  base={baseline:.4f}"
                         f"  after={acc_after:.4f}"
                         f"  forget={forgetting:.4f}"
+                        f" total_forget={total_forgetting:.4f}"
                     )
 
                     csv_rows.append({
@@ -277,6 +300,7 @@ def measure_probe_forgetting(args):
                         "block_acc_baseline": baseline,
                         "block_acc_tprime":   acc_after,
                         "forgetting":         forgetting,
+                        "total_forgetting":   total_forgetting,
                     })
 
                     if args.use_wandb:
@@ -284,6 +308,7 @@ def measure_probe_forgetting(args):
                             f"{block_name}/forgetting/pair{t}_{tprime}": forgetting,
                             f"{block_name}/acc_tprime/pair{t}_{tprime}": acc_after,
                             f"{block_name}/baseline/pair{t}_{tprime}":   baseline,
+                            f"{block_name}/total_forgetting/pair{t}_{tprime}": total_forgetting,
                             "round": round_idx,
                         })
 
@@ -320,15 +345,15 @@ if __name__ == "__main__":
                         default="C:/Thu/FCL/checkpoint/weightAVGClient0")
     parser.add_argument("--num_clients",     type=int, default=1)
     parser.add_argument("--num_tasks",       type=int, default=5)
-    parser.add_argument("--num_rounds",      type=int, default=15)
-    parser.add_argument("--epochs",          type=int, default=100)
+    parser.add_argument("--num_rounds",      type=int, default=5)
+    parser.add_argument("--epochs",          type=int, default=200)
     parser.add_argument("--batch_size",      type=int, default=128)
     parser.add_argument("--num_workers",     type=int, default=0)
-    parser.add_argument("--lr",              type=float, default=0.001)
+    parser.add_argument("--lr",             type=float, default=0.001)
     parser.add_argument("--seed_value",      type=int, default=42)
     parser.add_argument("--use_wandb",       action="store_true")
-    parser.add_argument("--dir_probe_cache", type=str, default="./probe_cache")
-    parser.add_argument("--patience",        type=int, default=5)
+    parser.add_argument("--dir_probe_cache", type=str, default="./probe_cache4")
+    parser.add_argument("--patience",        type=int, default=20)
     args = parser.parse_args()
 
     logging.basicConfig(

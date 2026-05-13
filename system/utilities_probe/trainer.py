@@ -151,6 +151,8 @@ class ProbeEvaluator:
             config=replace(self.training_configs, probe_caller=probe_caller),
             target_id_task=target_id_task,
         )
+        trainable = [n for n, p in probing_model.named_parameters() if p.requires_grad]
+        print(f"[DEBUG]Debgu Trainable params: {trainable}")
         probe_results = trainer.train()
         return probe_results
 
@@ -810,7 +812,7 @@ class OneShotTrainer:
 
 
     # def init_loggers(self):
-    #     # this is for the case of linear probes since they have intended block and we want to avoid over writing
+    #     # this igs for the case of linear probes since they have intended block and we want to avoid over writing
     #     experiment_name = f"/{self.config.experiment_name}" if self.config.experiment_name is not None else ""
     #     tb_logger = TensorboardLogger(
     #         log_dir="../tb_logs" + experiment_name,

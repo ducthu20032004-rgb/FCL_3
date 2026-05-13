@@ -19,7 +19,7 @@ from system.utilities_probe.metrics import PredictionBasedMetric, Representation
 from system.utilities_probe.utils import gpu_information_summary, merge, to_numpy
 from tqdm import tqdm
 class PredictionBasedEvaluator:
-    def __init__(self, metrics: Sequence[PredictionBasedMetric], batch_size: int = 32, num_workers: int = 0, num_classes: int = 10):
+    def __init__(self, metrics: Sequence[PredictionBasedMetric], batch_size: int = 32, num_workers: int = 0, num_classes: int = 2):
         self.batch_size = batch_size
         self.num_workers = num_workers
         n_gpu, self.device = gpu_information_summary(show=False)
