@@ -205,7 +205,7 @@ def measure_probe_forgetting(args):
         baseline_acc = {}   # [t][block_name] = float
 
         for t in range(4):
-            path = ckpt_path(client_id, t, args.num_rounds)
+            path = ckpt_path(client_id, t, args.num_rounds-1)
             if not os.path.isfile(path):
                 logger.error(f"  [MISSING baseline] {path}")
                 continue
