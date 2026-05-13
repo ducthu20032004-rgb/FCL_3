@@ -254,7 +254,7 @@ def measure_probe_forgetting(args):
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
             total_forgetting = 0.0  # Trung bình trên tất cả block
-            for round_idx in range(3):
+            for round_idx in range(args.num_rounds):
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")
@@ -345,7 +345,7 @@ if __name__ == "__main__":
                         default="C:/Thu/FCL/checkpoint/weightAVGClient0")
     parser.add_argument("--num_clients",     type=int, default=1)
     parser.add_argument("--num_tasks",       type=int, default=5)
-    parser.add_argument("--num_rounds",      type=int, default=5)
+    parser.add_argument("--num_rounds",      type=int, default=25)
     parser.add_argument("--epochs",          type=int, default=200)
     parser.add_argument("--batch_size",      type=int, default=128)
     parser.add_argument("--num_workers",     type=int, default=0)
