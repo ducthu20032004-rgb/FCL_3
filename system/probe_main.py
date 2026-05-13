@@ -101,9 +101,9 @@ def probe_single_task(
     không có optimizer shared state.
     """
     train_ds = read_client_data_FCL_cifar10(
-        client_id, task=target_task_id,ratio = 1, classes_per_task=2, train=True)
+        client_id, task=target_task_id,classes_per_task=2, train=True)
     test_ds = read_client_data_FCL_cifar10(
-        client_id, task=target_task_id, ratio= 1, classes_per_task=2, train=False)
+        client_id, task=target_task_id, classes_per_task=2, train=False)
     train_ds = RemappedDataset(
         train_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
     test_ds = RemappedDataset(
