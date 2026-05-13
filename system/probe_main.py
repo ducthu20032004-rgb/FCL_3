@@ -179,7 +179,7 @@ def measure_probe_forgetting(args):
         )
 
     #task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
-    task_pairs = [(1,3),(1,4),(2,3),(2,4),(3,4)]
+    task_pairs = [(0,1),(0,2),(0,3),(0,4)]
     CACHE_DIR = args.dir_probe_cache
     os.makedirs(CACHE_DIR, exist_ok=True)
 
@@ -254,7 +254,7 @@ def measure_probe_forgetting(args):
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
             total_forgetting = 0.0  # Trung bình trên tất cả block
-            for round_idx in range(args.num_rounds):
+            for round_idx in range(25):
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")

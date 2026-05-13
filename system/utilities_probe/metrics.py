@@ -5,11 +5,11 @@ import numpy as np
 import torch
 from torch.nn import modules, CrossEntropyLoss
 from torch.utils.data import Dataset
-
+from pytorch_metric_learning.losses import SupConLoss
 # from task_data_loader.split_cifar10 import TaskSpecificSplitCIFAR10
 from system.utils.CKA import TorchCKA
 from system.utilities_probe.utils import gpu_information_summary
-
+import torch.nn.functional as F
 
 class PredictionBasedMetric(ABC):
     @abstractmethod
@@ -115,9 +115,36 @@ class L2(RepresentationBasedMetric):
         return matrix / np.linalg.norm(matrix, axis=-1)[:, np.newaxis]
 
 
+# class Loss(PredictionBasedMetric):
+#     def __init__(self, criterion: modules.loss._Loss = SupConLoss()):
+#         self.criterion = criterion
+#         self.summed_loss = 0.0
+#         self.batches_processed = 0
+
+#     def initialize_metric(self, task: Union[Dataset], **kwargs):
+#         self.summed_loss = 0.0
+#         self.batches_processed = 0
+
+#     def eval_one_batch(self, logits: np.ndarray, targets: np.ndarray):
+#                 # Chuyển sang tensor
+#         embeddings = torch.from_numpy(logits).float()
+#         labels = torch.from_numpy(targets).long()
+
+#         # SupConLoss yêu cầu embeddings được L2-normalize
+#         embeddings = F.normalize(embeddings, p=2, dim=1)
+
+#         loss = self.criterion(embeddings,labels)
+#         self.summed_loss += loss.item()
+#         self.batches_processed += 1
+
+#     def compute_metric(self) -> Dict[str, float]:
+#         return {"eval_loss": self.summed_loss / self.batches_processed}
+
+
 class Loss(PredictionBasedMetric):
-    def __init__(self, criterion: modules.loss._Loss = CrossEntropyLoss()):
-        self.criterion = criterion
+    def __init__(self, criterion: modules.loss._Loss = None):
+        # SupConLoss mặc định nếu không truyền criterion
+        self.criterion = criterion if criterion is not None else SupConLoss()
         self.summed_loss = 0.0
         self.batches_processed = 0
 
@@ -126,7 +153,15 @@ class Loss(PredictionBasedMetric):
         self.batches_processed = 0
 
     def eval_one_batch(self, logits: np.ndarray, targets: np.ndarray):
-        loss = self.criterion(torch.from_numpy(logits), torch.from_numpy(targets))
+        # Chuyển sang tensor
+        embeddings = torch.from_numpy(logits).float()
+        labels = torch.from_numpy(targets).long()
+
+        # SupConLoss yêu cầu embeddings được L2-normalize
+        embeddings = F.normalize(embeddings, p=2, dim=1)
+
+        # SupConLoss nhận (embeddings, labels) — không cần one-hot
+        loss = self.criterion(embeddings, labels)
         self.summed_loss += loss.item()
         self.batches_processed += 1
 
