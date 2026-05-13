@@ -179,7 +179,7 @@ def measure_probe_forgetting(args):
         )
 
     #task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
-    task_pairs = [(1,2),(1,3),(1,4)]
+    task_pairs = [(2,3),(2,4),(3,4)]
     CACHE_DIR = args.dir_probe_cache
     os.makedirs(CACHE_DIR, exist_ok=True)
 
