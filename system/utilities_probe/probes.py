@@ -178,7 +178,7 @@ class LinearProbeCIFAR10(nn.Module):
         #     "4": self.fc_task4,
         # }
         self._heads = nn.ModuleDict({
-            str(i): nn.Linear(self.in_channel, 2) for i in range(num_tasks)
+            str(i): nn.Linear(self.in_channel, 10) for i in range(num_tasks)
         })
         for head in self._heads.values():
             xavier_uniform_initialize(head)

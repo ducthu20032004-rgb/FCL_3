@@ -6,7 +6,7 @@ import torch
 from system.utilities_probe.evaluation import PredictionBasedEvaluator, RepresentationBasedEvaluator
 # from utilities.loggers import Loggers
 from system.utilities_probe.utils import EarlyStoppingConfig
-
+from system.utilities_probe.supcon import SupConLoss
 
 @dataclass
 class TrainingConfig:

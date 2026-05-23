@@ -50,7 +50,7 @@ class RemappedDataset(Dataset):
 
 
 def load_model(path, device):
-    model = resnet18(pretrained=False, num_classes=2)
+    model = resnet18(pretrained=False, num_classes=10)
     model.fc = torch.nn.Identity()
     state = torch.load(path, map_location=device)
     new_state = {}
@@ -104,17 +104,17 @@ def probe_single_task(
         client_id, task=target_task_id,classes_per_task=2, train=True)
     test_ds = read_client_data_FCL_cifar10(
         client_id, task=target_task_id, classes_per_task=2, train=False)
-    train_ds = RemappedDataset(
-        train_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
-    test_ds = RemappedDataset(
-        test_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
+    # train_ds = RemappedDataset(
+    #     train_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
+    # test_ds = RemappedDataset(
+    #     test_ds, client_id=client_id, task_id=target_task_id, classes_per_task=2)
 
     scenario = SimpleScenario(tasks=[
         TaskConfig(
             train=train_ds,
             test=test_ds,
             id=str(target_task_id),
-            nb_classes=2,
+            nb_classes=10,
         )
     ])
     set_seed(args.seed_value, n_gpu=1)
@@ -133,6 +133,7 @@ def probe_single_task(
             metrics=[Accuracy(), Loss()],
             batch_size=args.batch_size,
             num_workers=args.num_workers,
+            num_classes=10,
         ),
         seed_value=args.seed_value,
         nb_epochs=args.epochs,
@@ -254,7 +255,7 @@ def measure_probe_forgetting(args):
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
             total_forgetting = 0.0  # Trung bình trên tất cả block
-            for round_idx in range(25):
+            for round_idx in [15]:
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")
