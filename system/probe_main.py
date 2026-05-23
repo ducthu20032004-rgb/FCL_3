@@ -255,7 +255,7 @@ def measure_probe_forgetting(args):
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
             total_forgetting = 0.0  # Trung bình trên tất cả block
-            for round_idx in [15]:
+            for round_idx in range(25):
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")
