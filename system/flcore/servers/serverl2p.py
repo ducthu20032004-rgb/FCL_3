@@ -1,10 +1,10 @@
 import time
 import torch
 import copy
-from flcore.clients.clientl2p import clientL2P
-from flcore.servers.serverbase import Server
-from utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
-from utils.model_utils import ParamDict
+from system.flcore.clients.clientl2p import clientL2P
+from system.flcore.servers.serverbase import Server
+from system.utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+from system.utils.model_utils import ParamDict
 from torch.nn.utils import vector_to_parameters, parameters_to_vector
 
 from torch.optim.lr_scheduler import StepLR

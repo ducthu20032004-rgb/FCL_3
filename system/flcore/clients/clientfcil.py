@@ -4,9 +4,9 @@ import torch.nn as nn
 import numpy as np
 import time
 
-from flcore.clients.clientbase import Client
-from flcore.utils_core.fcil_utils import entropy, get_one_hot
-from flcore.trainmodel.models import LeNet2, weights_init
+from system.flcore.clients.clientbase import Client
+from system.flcore.utils_core.fcil_utils import entropy, get_one_hot
+from system.flcore.trainmodel.models import LeNet2, weights_init
 
 import torch.optim as optim
 from torch.nn import functional as F

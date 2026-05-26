@@ -1,17 +1,23 @@
 """Implementations of Real NVP."""
 
 import torch
+
 from torch.nn import functional as F
 
-from utils.nflows.distributions.normal import StandardNormal
-from utils.nflows.flows.base import Flow
-from utils.nflows.nn import nets as nets
-from utils.nflows.transforms.base import CompositeTransform
-from utils.nflows.transforms.coupling import (
+from system.utils.nflows.distributions.normal import StandardNormal
+
+from system.utils.nflows.flows.base import Flow
+
+from system.utils.nflows.nn import nets as nets
+
+from system.utils.nflows.transforms.base import CompositeTransform
+
+from system.utils.nflows.transforms.coupling import (
     AdditiveCouplingTransform,
     AffineCouplingTransform,
 )
-from utils.nflows.transforms.normalization import BatchNorm
+
+from system.utils.nflows.transforms.normalization import BatchNorm
 
 
 class SimpleRealNVP(Flow):

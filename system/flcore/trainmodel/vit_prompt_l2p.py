@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import timm
-from flcore.trainmodel.models import BaseNetwork
+from system.flcore.trainmodel.models import BaseNetwork
 import torchvision.transforms as transforms
 from timm.models.layers import PatchEmbed, Mlp, DropPath, trunc_normal_, lecun_normal_
 from timm.models.helpers import (

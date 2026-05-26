@@ -1,24 +1,35 @@
 """Implementations of autoregressive transforms."""
 
+"""Implementations of autoregressive transforms."""
+
 import numpy as np
 import torch
+
 from torch.nn import functional as F
 
-from utils.nflows.transforms.base import Transform
-from utils.nflows.transforms import made as made_module
-from utils.nflows.transforms.splines.cubic import cubic_spline
-from utils.nflows.transforms.splines.linear import linear_spline
-from utils.nflows.transforms.splines.quadratic import (
+from system.utils.nflows.transforms.base import Transform
+
+from system.utils.nflows.transforms import made as made_module
+
+from system.utils.nflows.transforms.splines.cubic import cubic_spline
+
+from system.utils.nflows.transforms.splines.linear import linear_spline
+
+from system.utils.nflows.transforms.splines.quadratic import (
     quadratic_spline,
     unconstrained_quadratic_spline,
 )
-from utils.nflows.transforms.splines import rational_quadratic
-from utils.nflows.transforms.splines.rational_quadratic import (
+
+from system.utils.nflows.transforms.splines import rational_quadratic
+
+from system.utils.nflows.transforms.splines.rational_quadratic import (
     rational_quadratic_spline,
     unconstrained_rational_quadratic_spline,
 )
-from utils.nflows.utils import torchutils
-from utils.nflows.transforms.UMNN import *
+
+from system.utils.nflows.utils import torchutils
+
+from system.utils.nflows.transforms.UMNN import *
 
 
 class AutoregressiveTransform(Transform):

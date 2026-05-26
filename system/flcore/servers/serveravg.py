@@ -1,27 +1,110 @@
-import time, copy, inspect
+import time
+import copy
+import inspect
+
 import torch
 import torch.nn as nn
-from flcore.clients.clientavg import clientAVG
-from flcore.servers.serverbase import Server
-from utils.data_utils import *
-from utils.model_utils import ParamDict
-from torch.nn.utils import vector_to_parameters, parameters_to_vector
 import wandb
-from flcore.metrics.average_forgetting import metric_average_forgetting
-
-from torch.optim.lr_scheduler import StepLR
 import numpy as np
 
+from torch.nn.utils import (
+    vector_to_parameters,
+    parameters_to_vector
+)
+
+from torch.optim.lr_scheduler import StepLR
+
+from system.flcore.clients.clientavg import clientAVG
+
+from system.flcore.servers.serverbase import Server
+
+from system.utils.data_utils_mine import *
+from system.utils.model_utils import ParamDict
+
+from system.flcore.metrics.average_forgetting import (
+    metric_average_forgetting
+)
+
+from system.measure_gpu1 import *
 import statistics
 
 
 # ---------- Pretty logger (safe if not installed) ----------
 try:
-    from utils.rich_progress import RichRoundLogger
+    from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
+def _make_loader(dataset, batch_size: int = 256):
+    """
+    Tao DataLoader an toan, xu ly moi kieu tra ve cua read_client_data_FCL_cifar10:
 
+      Case 1 - torch.utils.data.Dataset chuan  -> dung truc tiep
+      Case 2 - tuple/list 2 phan tu (X, Y) voi X,Y la array/tensor (N,...) -> TensorDataset
+      Case 3 - list of (x_i, y_i) sample tuples -> stack roi TensorDataset
+    num_workers=0 de tranh loi pickle / seek khi data da duoc load san vao RAM.
+    """
+    from torch.utils.data import TensorDataset, Dataset
 
+    # Case 1: torch.utils.data.Dataset chuan
+    if isinstance(dataset, Dataset):
+        return DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+
+    # Case 2: (X, Y) - moi phan tu la array/tensor ca batch
+    # Nhan dien: co dung 2 phan tu va phan tu dau co >= 2 chieu (batch dim + feature dims)
+    if (isinstance(dataset, (tuple, list))
+            and len(dataset) == 2
+            and hasattr(dataset[0], 'shape')
+            and len(np.shape(dataset[0])) >= 2):
+        X, Y = dataset
+        xs = torch.as_tensor(np.array(X, dtype=np.float32))
+        ys = torch.as_tensor(np.array(Y)).long()
+        return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
+                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+
+    # Case 3: list of (x_i, y_i) sample tuples
+    xs, ys = [], []
+    for x, y in dataset:
+        xs.append(torch.as_tensor(np.array(x, dtype=np.float32)))
+        ys.append(torch.as_tensor(np.array(y)).long())
+    xs = torch.stack(xs)
+    ys = torch.stack(ys)
+    return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
+                      num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+def compute_feature_resnet18_wrap(_model, _model_task_index, _dataset, _target_layer_index: str, seed, args):
+    """
+    Trích xuất features trên GPU, trả về numpy array (N, D).
+    Chấp nhận Dataset chuẩn hoặc list of (x, y) tuples.
+    """
+
+    # ===== unwrap BaseHeadSplit =====
+    backbone = _model.base if hasattr(_model, "base") else _model
+
+    blocks = get_resnet18_blocks(backbone)
+
+    backbone.eval()
+
+    outputs = []
+
+    loader = _make_loader(_dataset, batch_size=256)
+
+    with torch.no_grad():
+        for features, targets in tqdm(
+            loader,
+            desc=f'Feature M_{_model_task_index}^{_target_layer_index}',
+            disable=True
+        ):
+            features = features.to(DEVICE, non_blocking=True)
+
+            for block_name, operations in blocks.items():
+                features = operations(features)
+
+                if block_name == _target_layer_index:
+                    break
+
+            outputs.append(torch.flatten(features, 1).cpu())
+
+    return torch.cat(outputs, dim=0).numpy()
 class FedAvg(Server):
     def __init__(self, args, times):
         super().__init__(args, times)
@@ -163,7 +246,7 @@ class FedAvg(Server):
             torch.cuda.empty_cache()
 
             # (B) Rounds within task
-
+            
             start_round = getattr(self.args, "start_round", 0)
             print("start_round =", start_round)
             print("global_rounds =", self.global_rounds)
@@ -185,11 +268,11 @@ class FedAvg(Server):
                 # (3) Broadcast global model
                 if hasattr(self, "send_models"):
                     self.send_models()
-
+                model_global_before = copy.deepcopy(self.global_model)
                 # (4) Optional global eval (lightweight)
                 if i % eval_gap == 0 and hasattr(self, "eval"):
                     try:
-                        self.eval(task=task, glob_iter=glob_iter, flag="global")
+                        self.eval(task=task, glob_iter=glob_iter, flag="local")
                     except TypeError:
                         # fall back if repo defines different signature
                         try:
@@ -228,19 +311,22 @@ class FedAvg(Server):
                     ret = None
                     
                     ret = _call_client_train(client, task=task, round_idx=i, glob_iter=glob_iter)
-
-                    if client.id in [0, 1,2,3,4,5,6,7,8,9]:  
-                        try:
-                            save_dir = "/kaggle/working/checkpoints"
-                            os.makedirs(save_dir, exist_ok=True)
-                            save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
+                    try:
+                        client._model_after_local = copy.deepcopy(client.model)
+                    except Exception:
+                        pass
+                    # if client.id in [0, 1,2,3,4]:  
+                    #     try:
+                    #         save_dir =  "C:/Thu/FCL/checkpoints"
+                    #         os.makedirs(save_dir, exist_ok=True)
+                    #         save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
-                            model_to_save = client.model
-                            torch.save(model_to_save.state_dict(), save_path)
-                            print(f"[SAVED] client={client.id} task={task} round={i} → {save_path}")
-                        except Exception as save_err:
-                            print(f"[ERROR] Failed to save client {client.id} task {task} round {i}: {save_err}")
-                            import traceback; traceback.print_exc()
+                    #         model_to_save = client.model
+                    #         torch.save(model_to_save.state_dict(), save_path)
+                    #         print(f"[SAVED] client={client.id} task={task} round={i} → {save_path}")
+                    #     except Exception as save_err:
+                    #         print(f"[ERROR] Failed to save client {client.id} task {task} round {i}: {save_err}")
+                    #         import traceback; traceback.print_exc()
 
 
                     # compute delta L2 of local update
@@ -294,8 +380,105 @@ class FedAvg(Server):
                     self.aggregate_parameters()
                 elif hasattr(self, "aggregate"):
                     self.aggregate()
+                model_global_after = copy.deepcopy(self.global_model)
+
+                # === Đo drift + cknna === 
+                # === Đo drift + cka + cknna ===
+                if getattr(self.args, "measure_drift", True):
+                    print("Drift thanh cong")
+                    try:
+                        # dict lưu kết quả per client per block
+                        drift_results = {}  # client.id -> {block_idx -> {metric: value}}
+
+                        for j, client in enumerate(self.selected_clients):
+                            if not hasattr(client, "_model_after_local"):
+                                continue
+
+                            test_data = read_client_data_FCL_cifar10(
+                                client.id, task=task,
+                                classes_per_task=self.args.cpt,
+                                count_labels=False, train=False
+                            )
+
+                            drift_results[client.id] = {}
+
+                            for block_idx in range(5):
+                                target_layer = f'block{block_idx}'
+                                try:
+                                    feat_global = compute_feature_resnet18_wrap(
+                                        model_global_before, task, test_data, target_layer,
+                                        self.args.seed, self.args)
+                                    feat_local = compute_feature_resnet18_wrap(
+                                        client._model_after_local, task, test_data, target_layer,
+                                        self.args.seed, self.args)
+                                    feat_aggre = compute_feature_resnet18_wrap(
+                                        model_global_after, task, test_data, target_layer,
+                                        self.args.seed, self.args)
+
+                                    drift_trained  = compute_eps(feat_global, feat_local)
+                                    drift_aggre    = compute_eps(feat_local,  feat_aggre)
+                                    drift_global = compute_eps(feat_global,feat_aggre)
+                                    _,cka_trained    = compute_cka(feat_global, feat_local)
+                                    _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
+                                    _,cka_global = compute_cka(feat_global,feat_aggre)
+                                    cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
+                                    cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
+                                    cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
+                                    drift_results[client.id][block_idx] = {
+                                        "drift_trained": drift_trained,
+                                        "drift_aggre":   drift_aggre,
+                                        "drift_global":drift_global,
+                                        "cka_trained":   cka_trained,
+                                        "cka_aggre":     cka_aggre,
+                                        "cknna_global":cknna_global,
+                                        "cknna_trained": cknna_trained,
+                                        "cknna_aggre":   cknna_aggre,
+                                        "cknna_global": cknna_global,
+                                    }
+
+                                    # print per block per client
+                                    print(
+                                        f"[Drift] round={disp_round} task={task} client={client.id} {target_layer} | "
+                                        f"drift_trained={drift_trained:.4f} drift_aggre={drift_aggre:.4f} | drift_global = {drift_global} |"
+                                        f"cka_trained={cka_trained:.4f} cka_aggre={cka_aggre:.4f} | cka_global = {cka_global} |"
+                                        f"cknna_trained={cknna_trained:.4f} cknna_aggre={cknna_aggre:.4f} cknna_global = {cknna_global}"
+                                    )
+
+                                except Exception as e:
+                                    print(f"[Drift] client={client.id} block{block_idx} error: {e}")
+                                    drift_results[client.id][block_idx] = None
+
+                            # append vào client_summaries đúng client
+                            block_summary = {}
+                            for block_idx in range(5):
+                                r = drift_results[client.id].get(block_idx)
+                                if r is None:
+                                    continue
+                                for metric_name, val in r.items():
+                                    block_summary[f"block{block_idx}/{metric_name}"] = val
+                            client_summaries[j].update(block_summary)
+
+                        # wandb log: mean across clients per block per metric
+                        if getattr(self.args, "wandb", False):
+                            wb_drift = {"round": disp_round, "task": task}
+                            for block_idx in range(5):
+                                for metric_name in ["drift_trained", "drift_aggre", "cka_trained", "cka_aggre", "cknna_trained", "cknna_aggre"]:
+                                    vals = [
+                                        drift_results[cid][block_idx][metric_name]
+                                        for cid in drift_results
+                                        if drift_results[cid].get(block_idx) is not None
+                                        and metric_name in drift_results[cid][block_idx]
+                                    ]
+                                    if vals:
+                                        wb_drift[f"drift/block{block_idx}/{metric_name}_mean"] = float(np.mean(vals))
+                                        wb_drift[f"drift/block{block_idx}/{metric_name}_std"]  = float(np.std(vals))
+                            wandb.log(wb_drift)
+
+                    except Exception as e:
+                        print(f"[Drift measure] warning: {e}")
+                        import traceback; traceback.print_exc()       
                 # ===== SAVE CHECKPOINT PER ROUND (mỗi 10 round) =====
-                if getattr(self.args, "save_checkpoint", False) and glob_iter > 0 and ((glob_iter+1) % 5 == 0):
+                if getattr(self.args, "save_checkpoint", False) and glob_iter > 0 and ((glob_iter+1) % 1 == 0):
                     self.save_checkpoint(glob_iter=glob_iter, tag="latest")
                 # (7) Optional extras (preserve if available)
                 if getattr(self.args, "seval", False) and hasattr(self, "spatio_grad_eval"):

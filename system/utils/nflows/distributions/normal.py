@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from torch import nn
 
-from utils.nflows.distributions.base import Distribution
-from utils.nflows.utils import torchutils
+from system.utils.nflows.distributions.base import Distribution
 
+from system.utils.nflows.utils import torchutils
 
 class StandardNormal(Distribution):
     """A multivariate Normal with zero mean and unit covariance."""

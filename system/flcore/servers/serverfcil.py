@@ -21,16 +21,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from flcore.clients.clientfcil import clientFCIL
-from flcore.servers.serverbase import Server
-from flcore.trainmodel.models import LeNet2, weights_init
-from flcore.utils_core.fcil_utils import Proxy_Data
-from utils.data_utils import get_unique_tasks
-from flcore.metrics.average_forgetting import metric_average_forgetting
+from system.flcore.clients.clientfcil import clientFCIL
+from system.flcore.servers.serverbase import Server
+from system.flcore.trainmodel.models import LeNet2, weights_init
+from system.flcore.utils_core.fcil_utils import Proxy_Data
+from system.utils.data_utils import get_unique_tasks
+from system.flcore.metrics.average_forgetting import metric_average_forgetting
 
 # Pretty logger (safe if not installed)
 try:
-    from utils.rich_progress import RichRoundLogger
+    from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
 

@@ -4,14 +4,14 @@ from torch import optim
 import glog as logger
 import numpy as np
 
-from flcore.trainmodel.models import S_ConvNet, Resnet_plus
-from utils.nflows.flows.base import Flow
-from utils.nflows.transforms.permutations import RandomPermutation, ReversePermutation
-from utils.nflows.transforms.base import CompositeTransform
-from utils.nflows.transforms.coupling import AffineCouplingTransform
-from utils.nflows.nn.nets.myresnet import ResidualNet
+from system.flcore.trainmodel.models import S_ConvNet, Resnet_plus
+from system.utils.nflows.flows.base import Flow
+from system.utils.nflows.transforms.permutations import RandomPermutation, ReversePermutation
+from system.utils.nflows.transforms.base import CompositeTransform
+from system.utils.nflows.transforms.coupling import AffineCouplingTransform
+from system.utils.nflows.nn.nets.myresnet import ResidualNet
 from torch.nn import functional as F
-from utils.nflows.distributions.normal import StandardNormal
+from system.utils.nflows.distributions.normal import StandardNormal
 
 def myitem(x):
     if torch.is_tensor(x):

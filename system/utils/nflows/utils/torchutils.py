@@ -1,6 +1,6 @@
 """Various PyTorch utility functions."""
 
-from utils.nflows.utils import typechecks as check
+from system.utils.nflows.utils import typechecks as check
 import numpy as np
 import torch
 

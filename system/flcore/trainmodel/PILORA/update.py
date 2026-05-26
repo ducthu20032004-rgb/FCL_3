@@ -8,8 +8,8 @@ import numpy as np
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import StepLR
 import torch.nn.functional as F
-from utils.data_utils import *
-from flcore.trainmodel.PILORA.CPN import *
+from system.utils.data_utils import *
+from system.flcore.trainmodel.PILORA.CPN import *
 from sklearn.metrics.pairwise import cosine_similarity
 
 

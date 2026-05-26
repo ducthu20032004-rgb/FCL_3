@@ -4,9 +4,9 @@ import numpy as np
 import time
 import copy
 
-from flcore.clients.clientbase import Client
-from flcore.trainmodel.fedewit_models import *
-from flcore.utils_core.fedweit_utils import *
+from system.flcore.clients.clientbase import Client
+from system.flcore.trainmodel.fedewit_models import *
+from system.flcore.utils_core.fedweit_utils import *
 
 class clientWeIT(Client):
     def __init__(self, args, id, train_data, initial_weights, **kwargs):

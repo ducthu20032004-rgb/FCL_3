@@ -5,12 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import ConcatDataset, DataLoader
 
-from flcore.clients.clientbase import Client
-from flcore.criterion.distillation import (
+from system.flcore.clients.clientbase import Client
+from system.flcore.criterion.distillation import (
     kl_divergence_with_temperature as kd_kl,
     relation_mse
 )
-# from flcore.utils.memory import ExemplarMemory, class_frequency
+# from system.flcore.utils.memory import ExemplarMemory, class_frequency
 
 class clientGLFC(Client):
     """

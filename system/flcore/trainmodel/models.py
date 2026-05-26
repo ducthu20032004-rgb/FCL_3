@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import nn
-from flcore.trainmodel.resnet import resnet18_cbam
+from system.flcore.trainmodel.resnet import resnet18_cbam
 
 batch_size = 10
 

@@ -10,6 +10,7 @@ import math
 import torch.nn as nn
 import numpy as np
 import torch
+import torchvision
 import wandb
 from tqdm import tqdm
 from system.flcore.metrics.average_forgetting import metric_average_forgetting
@@ -24,6 +25,7 @@ from torch.utils.data import DataLoader
 import sys
 from system.flcore.grad_cam.base_cam import *
 import plotly.graph_objects as go
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Device
 # ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +78,11 @@ def get_model_path(saving_dir: str, client_id: int, task: int, round: int) -> st
 
 def get_model_path_no_round(saving_dir: str, client_id: int, task: int) -> str:
     return os.path.join(saving_dir, f'client_{client_id}_task_{task}.pt')
+def get_model_path_probe(saving_dir: str, client_id: int, task: int, intended_block: int) -> str:
+    return os.path.join(
+        saving_dir,
+        f"head_task{task}_block{intended_block}.pt"
+    )
 # ─────────────────────────────────────────────────────────────────────────────
 # Các hàm đo
 # ─────────────────────────────────────────────────────────────────────────────
@@ -275,6 +282,7 @@ def _make_loader(dataset, batch_size: int = 256):
                       num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
 
 
+
 def compute_feature_resnet18(_model, _model_task_index, _dataset, _target_layer_index: str, seed, args):
     """
     Trích xuất features trên GPU, trả về numpy array (N, D).
@@ -406,7 +414,7 @@ def to_float(x):
     if isinstance(x, torch.Tensor):
         return x.detach().cpu().item()
     return float(x)
-# ─────────────────────────────────────────────────────────────────────────────
+#─────────────────────────────────────────────────────
 # Hàm đo chính
 # ─────────────────────────────────────────────────────────────────────────────
 def measure_all_representation_drift(args):
@@ -418,6 +426,7 @@ def measure_all_representation_drift(args):
         f'./{root}/representation_drift_temporal_25_4'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
+
 
     if not os.path.isfile(output_file):
         with open(output_file, 'w') as f:
@@ -441,7 +450,7 @@ def measure_all_representation_drift(args):
     # key = (t, tprime, block_idx) → value = old_test_acc của round trước
     acc_history_old: dict = {}
 
-    for client_id in [0]:
+    for client_id in [9]:
         logger.info('=' * 60)
         logger.info(
             f'  CLIENT {client_id:>2} / {args.num_clients - 1}'
@@ -459,12 +468,13 @@ def measure_all_representation_drift(args):
             #     for block_idx in range(num_blocks)
             # }
 
-            for round_idx in range(25):
+            for round_idx in [24]:
                 logger.info(f'  ┌── Task pair ({t}, {tprime}), round {round_idx}')
 
                 ckpt_t  = get_model_path(args.saving_dir, client_id, t,      round_idx)
                 ckpt_tp = get_model_path(args.saving_dir, client_id, tprime, round_idx)
                 ckpt_eps_t = get_model_path(args.saving_dir, client_id, t, 24)
+                 # probe chỉ cần model cuối cùng của task t
                 skip = False
                 for ckpt in [ckpt_t, ckpt_tp]:
                     if not os.path.isfile(ckpt):
@@ -476,6 +486,7 @@ def measure_all_representation_drift(args):
                 model_t      = load_resnet18_from_checkpoint(ckpt_t,  load_head=False)
                 model_eps_t = load_resnet18_from_checkpoint(ckpt_eps_t, load_head=False)
                 model_tprime = load_resnet18_from_checkpoint(ckpt_tp, load_head=False)
+                
                 logger.info(f'  │  model_t  ← {ckpt_t}')
                 logger.info(f'  │  model_t\' ← {ckpt_tp}')
 
@@ -486,11 +497,11 @@ def measure_all_representation_drift(args):
                     client_id, task=tprime, classes_per_task=args.cpt,
                     count_labels=False, train=False)
 
-                # loader_t      = _make_loader(test_data_t)
-                # loader_tprime = _make_loader(test_data_tprime)
+                loader_t      = _make_loader(test_data_t)
+                loader_tprime = _make_loader(test_data_tprime)
 
-                # model_head_t  = load_model_with_head(ckpt_t,  num_classes=args.classes)
-                # model_head_tp = load_model_with_head(ckpt_tp, num_classes=args.classes)
+                model_head_t  = load_model_with_head(ckpt_t,  num_classes=args.classes)
+                model_head_tp = load_model_with_head(ckpt_tp, num_classes=args.classes)
 
                 # # ── Logits & cosine similarity (head level) ──────────────────
                 # logits_t_list      = []
@@ -524,11 +535,11 @@ def measure_all_representation_drift(args):
                 # )
 
                 # # ── Accuracy ─────────────────────────────────────────────────
-                # acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
+                acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
                 # current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
-                # old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
-                # list_acc_matrix.append(acc_t_on_head)
-                # drop_acc = max(list_acc_matrix) - old_test_acc
+                old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
+                list_acc_matrix.append(acc_t_on_head)
+                drop_acc = max(list_acc_matrix) - old_test_acc
                 # # ── Neuron importance (layer4[-1], fixed) ────────────────────
                 # target_layer_tp = [model_tprime.layer4[-1]]
                 # model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
@@ -556,10 +567,28 @@ def measure_all_representation_drift(args):
                 # ) / k_top
 
                 # ── Per-block loop ───────────────────────────────────────────
-                for block_idx in range(num_blocks):
+                for block_idx in range(5):
                     target_layer = f'block{block_idx}'
                     # scatter      = scatters[block_idx]
+                    # ckpt_probe_tp = get_model_path_probe(
+                    #     args.cp_probe, client_id, tprime, intended_block=block_idx
+                    # )
+                    # ckpt_probe_t = get_model_path_probe(
+                    #     args.cp_probe, client_id, t, intended_block=block_idx
+                    # )
+                    # 🔥 FIX: load đúng model
 
+                    # model_probe_tp = load_probe(tprime, block_idx, client_id, args.saving_dir, args.cp_probe,round_idx=round_idx, device=DEVICE)
+                    # model_probe_t = load_probe(t, block_idx, client_id, args.saving_dir, args.cp_probe,round_idx=round_idx, device=DEVICE)
+
+                    # acc_probe = test_metrics(
+                    #     model_probe_t,
+                    #     loader_t,
+                    #     class_order=client_class_order,
+                    #     task_index=t
+                    # )
+
+                    
                     try:
                         feat_t_old  = compute_feature_resnet18(
                             model_eps_t,      t,      test_data_t, target_layer,
@@ -575,7 +604,7 @@ def measure_all_representation_drift(args):
                             model_tprime, tprime, test_data_tprime, target_layer,
                             args.seed, args)
 
-
+                        # Cal Probe accuracy (linear head trên feature cũ)
                         # if block_idx == 0:
                         #     width_t = width_tp = float('nan')
                         # else:
@@ -642,8 +671,8 @@ def measure_all_representation_drift(args):
                         done    += 1
                         progress = f'[{done}/{total}]'
 
-                        # logger.info(
-                        #     f'  │  {progress} {target_layer} | '
+                        logger.info(
+                            f'  │  {progress} {target_layer} | '
                         #     f'cos_logit={cos_logit_mean:.4f}  '
                         #     f'drift_neuron={drift_neuron:.4f}  '
                         #     f'cosine_neuron={cosine_neuron:.4f}  '
@@ -655,7 +684,8 @@ def measure_all_representation_drift(args):
                         #     f'CKA_curr={cka_curr:.4f}  linear_CKA_curr={float(linear_cka_curr):.4f}  '
                         #     f'kernel_CKA_curr={float(kernel_cka_curr):.4f}  '
                         #     f'cka_gap={cka_gap:.4f}  '
-                        #     f'forgetting={drop_acc*100:.4f}%'
+                                # f'acc_probe={acc_probe*100:.2f}%  '
+                                f'forgetting={drop_acc*100:.4f}%'
                         #     f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
                         #     f'ratio={ratio_feature:.4f}  '
                         #     f'align@10={align_score[10]:.4f}  '
@@ -664,7 +694,7 @@ def measure_all_representation_drift(args):
                         #     f'ACC_old({t})={old_test_acc*100:.2f}%  '
                         #     f'ACC_t_real={acc_t_on_head*100:.2f}%  '
                         #     f'acc_drop={acc_drop_rate*100 if acc_drop_rate==acc_drop_rate else float("nan"):.2f}%'
-                        # )
+                        )
 
                         # # ── ScatterLogger ────────────────────────────────────
                         # scatter.log_pair("round_vs_cosine_logit",       round_idx, cos_logit_mean)
@@ -1059,7 +1089,7 @@ def measure_follow_training(args):
 
 
     output_file_v2 = (
-        f'{root}/forgetting_detail'
+        f'{root}/forgetting_detail_client9'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
@@ -1078,7 +1108,7 @@ def measure_follow_training(args):
             f.write(header_v2)
     num_blocks = 5
 
-    for client_id in range(1):
+    for client_id in [9]:
         logger.info('=' * 60)
         logger.info(f'  CLIENT {client_id:>2} / {args.num_clients - 1}')
         logger.info('=' * 60)
@@ -1244,8 +1274,8 @@ def measure_follow_training(args):
                 #fwt = compute_fwt(accuracy_matrix=acc_matrix,task=task,random_baseline=None)
                                 # Grad-CAM
                 target_layer_curr = [model_curr.layer4[-1]]
-                model_with_grad_cam_curr = BaseCAM(model_curr, target_layer_curr)
-                neuron_important_curr = model_with_grad_cam_curr.get_importance(loader_old,target_layer_curr) if has_old else model_with_grad_cam_curr.get_importance(loader_curr,target_layer_curr)
+                # model_with_grad_cam_curr = BaseCAM(model_curr, target_layer_curr)
+                # neuron_important_curr = model_with_grad_cam_curr.get_importance(loader_old,target_layer_curr) if has_old else model_with_grad_cam_curr.get_importance(loader_curr,target_layer_curr)
 
                 # if has_old:
                 #     target_layer_prev = [model_prev_task.layer4[-1]]
@@ -1692,6 +1722,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Representation Drift Measurement')
 
     parser.add_argument('--saving_dir',        type=str,  default=r'D:\FCL\checkpoints_client_task')
+    parser.add_argument('--cp_probe',          type=str,  default=r'C:\Thu\FCL\probes_torchvision')
     parser.add_argument('--partition_options', type=str,  default='hetero')
     parser.add_argument('--backbone',          type=str,  default='ResNet18')
     parser.add_argument('--num_clients',       type=int,  default=10)

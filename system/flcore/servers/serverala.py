@@ -11,22 +11,29 @@ while preserving FedALA's original training algorithm (local init + ALA train).
 Paste over your existing FedALA in: system/flcore/servers/serverala.py
 """
 
+import os
 import time
 import copy
 import inspect
+
 from typing import Any, Dict, List, Optional
 
 import torch
 import torch.nn as nn
 import numpy as np
 import wandb
-from flcore.clients.clientala import clientALA
-from flcore.servers.serverbase import Server
-from flcore.metrics.average_forgetting import metric_average_forgetting
+
+from system.flcore.clients.clientala import clientALA
+
+from system.flcore.servers.serverbase import Server
+
+from system.flcore.metrics.average_forgetting import (
+    metric_average_forgetting
+)
 
 # Pretty logger (safe if not installed)
 try:
-    from utils.rich_progress import RichRoundLogger
+    from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
 
@@ -130,7 +137,7 @@ class FedALA(Server):
 
                 for i in range(len(self.clients)):
                     if self.args.partition_options == 'tuan':
-                        from utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k, read_client_data_FCL_cifar10
+                        from system.utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k, read_client_data_FCL_cifar10
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         elif self.args.dataset == 'CIFAR100':
@@ -140,7 +147,7 @@ class FedALA(Server):
                         else:
                             raise NotImplementedError("Not supported dataset")
                     elif self.args.partition_options == 'hetero':
-                        from utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
                                                                                     seed = self.args.seed, alpha = self.args.alpha,
@@ -223,6 +230,23 @@ class FedALA(Server):
                     # train with signature-aware args
                     try:
                         _ = self._call_client_train(client, task=task, round_idx=i, glob_iter=glob_iter)
+                        # ── Lưu checkpoint sau mỗi round ──────────────────────────
+                        try:
+                            cid = self._cid(client, j)
+                            save_dir = os.path.join(
+                                getattr(self.args, "checkpoint_dir", "checkpoints"), "ALA"
+                            )
+                            os.makedirs(save_dir, exist_ok=True)
+                            save_path = os.path.join(
+                                save_dir,
+                                f"client_{cid}_task_{task}_round_{i}.pt"
+                            )
+                            torch.save(client.model.state_dict(), save_path)
+                            print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
+                        except Exception as save_err:
+                            print(f"[CKPT ERROR] client={cid} task={task} round={i}: {save_err}")
+                        # ──────────────────────────────────────────────────────────
+
                     except Exception as e:
                         _ = {"error": str(e)}
                         # 🟢 loss sau khi local train xong

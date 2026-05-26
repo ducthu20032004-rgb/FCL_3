@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn import init
 
-from utils.nflows.utils import torchutils
+from system.utils.nflows.utils import torchutils
 
 
 def _get_input_degrees(in_features):

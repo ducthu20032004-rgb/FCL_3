@@ -25,16 +25,16 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from flcore.clients.clienttarget import clientTARGET
-from flcore.servers.serverbase import Server
-from flcore.metrics.average_forgetting import metric_average_forgetting
+from system.flcore.clients.clienttarget import clientTARGET
+from system.flcore.servers.serverbase import Server
+from system.flcore.metrics.average_forgetting import metric_average_forgetting
 
 # TARGET utils (kept as in your original)
-from flcore.utils_core.target_utils import *
+from system.flcore.utils_core.target_utils import *
 
 # Pretty logger (safe if not installed)
 try:
-    from utils.rich_progress import RichRoundLogger
+    from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
 
@@ -161,15 +161,17 @@ class FedTARGET(Server):
 
                 for i in range(len(self.clients)):
                     if self.args.partition_options == 'tuan':
-                        from utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        from system.utils.data_utils import read_client_data_FCL_cifar10,read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         elif self.args.dataset == 'CIFAR100':
                             train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
+                        elif self.args.dataset == "CIFAR10":
+                            train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         else:
                             raise NotImplementedError("Not supported dataset")
                     elif self.args.partition_options == 'hetero':
-                        from utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
                                                                                     seed = self.args.seed, alpha = self.args.alpha,
@@ -257,6 +259,22 @@ class FedTARGET(Server):
                     # TARGET local train (keep algorithm)
                     try:
                         _ = self._call_client_train(client, task=task, round_idx=i, glob_iter=glob_iter)
+                        # ── Lưu checkpoint sau mỗi round ──────────────────────────
+                        try:
+                            cid = self._cid(client, j)
+                            save_dir = os.path.join(
+                                getattr(self.args, "checkpoint_dir", "checkpoints"), "Target"
+                            )
+                            os.makedirs(save_dir, exist_ok=True)
+                            save_path = os.path.join(
+                                save_dir,
+                                f"client_{cid}_task_{task}_round_{i}.pt"
+                            )
+                            torch.save(client.model.state_dict(), save_path)
+                            print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
+                        except Exception as save_err:
+                            print(f"[CKPT ERROR] client={cid} task={task} round={i}: {save_err}")
+                        # ──────────────────────────────────────────────────────────
                     except Exception as e:
                         _ = {"error": str(e)}
 
@@ -359,7 +377,7 @@ class FedTARGET(Server):
             #     if self.args.offlog and not self.args.debug:
             #         self.eval_task(task=task, glob_iter=glob_iter, flag="global")
             self.send_models()  # as in your original
-            self.eval_task(task=task, glob_iter=glob_iter, flag="global")
+            self.eval_task(task=task, glob_iter=glob_iter, flag="local")
 
             # ---------------- dump GLOBAL per-task row ONCE per task end ----------------
             try:

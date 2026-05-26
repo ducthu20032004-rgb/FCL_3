@@ -1,6 +1,6 @@
 import numpy as np
 import time
-from flcore.clients.clientbase import Client
+from system.flcore.clients.clientbase import Client
 
 
 class clientAVG(Client):
@@ -27,7 +27,7 @@ class clientAVG(Client):
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
-
+        
         if self.args.teval:
             self.grad_eval(old_model=self.model)
 

@@ -1,4 +1,4 @@
-from utils.nflows.transforms.autoregressive import (
+from system.utils.nflows.transforms.autoregressive import (
     MaskedAffineAutoregressiveTransform,
     MaskedPiecewiseCubicAutoregressiveTransform,
     MaskedPiecewiseLinearAutoregressiveTransform,
@@ -6,7 +6,8 @@ from utils.nflows.transforms.autoregressive import (
     MaskedPiecewiseRationalQuadraticAutoregressiveTransform,
     MaskedUMNNAutoregressiveTransform,
 )
-from utils.nflows.transforms.base import (
+
+from system.utils.nflows.transforms.base import (
     CompositeTransform,
     InputOutsideDomain,
     InverseNotAvailable,
@@ -14,8 +15,10 @@ from utils.nflows.transforms.base import (
     MultiscaleCompositeTransform,
     Transform,
 )
-from utils.nflows.transforms.conv import OneByOneConvolution
-from utils.nflows.transforms.coupling import (
+
+from system.utils.nflows.transforms.conv import OneByOneConvolution
+
+from system.utils.nflows.transforms.coupling import (
     AdditiveCouplingTransform,
     AffineCouplingTransform,
     PiecewiseCubicCouplingTransform,
@@ -24,9 +27,12 @@ from utils.nflows.transforms.coupling import (
     PiecewiseRationalQuadraticCouplingTransform,
     UMNNCouplingTransform,
 )
-from utils.nflows.transforms.linear import NaiveLinear
-from utils.nflows.transforms.lu import LULinear
-from utils.nflows.transforms.nonlinearities import (
+
+from system.utils.nflows.transforms.linear import NaiveLinear
+
+from system.utils.nflows.transforms.lu import LULinear
+
+from system.utils.nflows.transforms.nonlinearities import (
     CompositeCDFTransform,
     Exp,
     GatedLinearUnit,
@@ -40,19 +46,31 @@ from utils.nflows.transforms.nonlinearities import (
     Sigmoid,
     Tanh,
 )
-from utils.nflows.transforms.normalization import ActNorm, BatchNorm
-from utils.nflows.transforms.orthogonal import HouseholderSequence
-from utils.nflows.transforms.permutations import (
+
+from system.utils.nflows.transforms.normalization import (
+    ActNorm,
+    BatchNorm,
+)
+
+from system.utils.nflows.transforms.orthogonal import (
+    HouseholderSequence,
+)
+
+from system.utils.nflows.transforms.permutations import (
     Permutation,
     RandomPermutation,
     ReversePermutation,
 )
-from utils.nflows.transforms.qr import QRLinear
-from utils.nflows.transforms.reshape import SqueezeTransform
-from utils.nflows.transforms.standard import (
+
+from system.utils.nflows.transforms.qr import QRLinear
+
+from system.utils.nflows.transforms.reshape import SqueezeTransform
+
+from system.utils.nflows.transforms.standard import (
     AffineScalarTransform,
     AffineTransform,
     IdentityTransform,
     PointwiseAffineTransform,
 )
-from utils.nflows.transforms.svd import SVDLinear
+
+from system.utils.nflows.transforms.svd import SVDLinear

@@ -5,8 +5,8 @@ import numpy as np
 import wandb
 import copy
 
-from flcore.clients.clientbase import Client
-from flcore.utils_core.AFFCL_utils import str_in_list, Meter
+from system.flcore.clients.clientbase import Client
+from system.flcore.utils_core.AFFCL_utils import str_in_list, Meter
 
 eps = 1e-30
 

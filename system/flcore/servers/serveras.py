@@ -25,13 +25,13 @@ import torch
 import statistics
 from typing import Any, Dict, List, Optional
 
-from flcore.clients.clientas import clientAS
-from flcore.servers.serverbase import Server
-from flcore.metrics.average_forgetting import metric_average_forgetting
+from system.flcore.clients.clientas import clientAS
+from system.flcore.servers.serverbase import Server
+from system.flcore.metrics.average_forgetting import metric_average_forgetting
 
 # Pretty logger (safe if not installed)
 try:
-    from utils.rich_progress import RichRoundLogger
+    from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
 
@@ -153,7 +153,7 @@ class FedAS(Server):
 
                 for i in range(len(self.clients)):
                     if self.args.partition_options == 'tuan':
-                        from utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        from system.utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         elif self.args.dataset == 'CIFAR100':
@@ -161,7 +161,7 @@ class FedAS(Server):
                         else:
                             raise NotImplementedError("Not supported dataset")
                     elif self.args.partition_options == 'hetero':
-                        from utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
                                                                                     seed = self.args.seed, alpha = self.args.alpha,

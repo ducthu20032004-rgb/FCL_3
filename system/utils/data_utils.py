@@ -107,7 +107,7 @@ def read_client_data_FCL_cifar100(index, task = 0, classes_per_task = 2, count_l
     
     return data
 
-def read_client_data_FCL_cifar10(index, task = 0, classes_per_task = 2, count_labels=False, train=True):
+def read_client_data_FCL_cifar10(index, task = 0, classes_per_task = 2, ratio=1.0, count_labels=False, train=True):
     
     datadir = './dataset/cifar10-classes/'
     class_order = np.load('./dataset/class_order/class_order_cifar10.npy', allow_pickle=True)
@@ -117,11 +117,23 @@ def read_client_data_FCL_cifar10(index, task = 0, classes_per_task = 2, count_la
         x, y = load_data(datadir, class_order[task*classes_per_task:(task+1)*classes_per_task], train_images_per_class=5000, test_images_per_class=1000, train=True)
     else:
         x, y = load_data(datadir, class_order[task*classes_per_task:(task+1)*classes_per_task], train_images_per_class=5000, test_images_per_class=1000, train=False)
+        # selected_classes = class_order[0:(task+1)*classes_per_task]
+        # x, y = load_data(datadir, selected_classes, train_images_per_class=5000, test_images_per_class=1000, train=False)
+    # Thêm debug ngay trong read_client_data_FCL_cifar10
+    # print(f"[DEBUG] task={task}, classes={selected_classes}")
+    #print(f"[DEBUG] unique y = {torch.unique(torch.Tensor(y))}")
     # x = x.type(torch.FloatTensor)
     # print(x.shape)
+    
+        # Subsample theo ratio
+    if ratio < 1.0:
+        k = max(1, int(len(y) * ratio))
+        idx = torch.randperm(len(y))[:k]
+        x, y = x[idx], y[idx]
     y = torch.Tensor(y.type(torch.long))
     data = Transform_dataset(x, y)
-
+    # print("Expected classes:", class_order[task*classes_per_task:(task+1)*classes_per_task])
+    # print("Actual labels:", torch.unique(y))
     if count_labels:
         label_info = {}
         unique_y, counts=torch.unique(y, return_counts=True)

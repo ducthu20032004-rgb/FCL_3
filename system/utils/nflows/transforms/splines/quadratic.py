@@ -1,8 +1,8 @@
 import torch
 from torch.nn import functional as F
 
-from utils.nflows.transforms.base import InputOutsideDomain
-from utils.nflows.utils import torchutils
+from system.utils.nflows.transforms.base import InputOutsideDomain
+from system.utils.nflows.utils import torchutils
 
 DEFAULT_MIN_BIN_WIDTH = 1e-3
 DEFAULT_MIN_BIN_HEIGHT = 1e-3

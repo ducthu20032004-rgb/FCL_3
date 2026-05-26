@@ -1,7 +1,7 @@
 from torch.nn import functional as F
 
-from utils.nflows.distributions.base import Distribution
-from utils.nflows.nn.nde import MixtureOfGaussiansMADE
+from system.utils.nflows.distributions.base import Distribution
+from system.utils.nflows.nn.nde import MixtureOfGaussiansMADE
 
 
 class MADEMoG(Distribution):

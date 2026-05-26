@@ -12,12 +12,12 @@ from torch.autograd import Variable
 import os
 import sys
 import numpy as np
-from flcore.trainmodel.PILORA.VLT import *
-from flcore.trainmodel.PILORA.utils import *
-from flcore.trainmodel.PILORA.update import *
+from system.flcore.trainmodel.PILORA.VLT import *
+from system.flcore.trainmodel.PILORA.utils import *
+from system.flcore.trainmodel.PILORA.update import *
 from tqdm import tqdm
 # from iCIFAR100 import iCIFAR100
-from flcore.trainmodel.PILORA.CPN import *
+from system.flcore.trainmodel.PILORA.CPN import *
 # from t_sneplot import *
 
 class vitlora:

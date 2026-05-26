@@ -1,10 +1,10 @@
 # system/flcore/servers/serverLANDER.py
 import copy
 import torch
-from flcore.servers.serverbase import Server
-from flcore.clients.clientLANDER import clientLANDER
-# from flcore.utils.text_encoder import get_text_anchors
-from flcore.utils_core.text_encoder import get_text_anchors
+from system.flcore.servers.serverbase import Server
+from system.flcore.clients.clientLANDER import clientLANDER
+# from system.flcore.utils.text_encoder import get_text_anchors
+from system.flcore.utils_core.text_encoder import get_text_anchors
 class LANDERServer(Server):
     """
     LANDER server:

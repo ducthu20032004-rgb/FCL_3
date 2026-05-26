@@ -6,14 +6,14 @@ import torch
 import torch.nn as nn
 import copy
 from torch.optim.lr_scheduler import StepLR
-from utils.model_utils import ParamDict
+from system.utils.model_utils import ParamDict
 from torch.nn.utils import vector_to_parameters, parameters_to_vector
-from flcore.clients.clientbase import Client
+from system.flcore.clients.clientbase import Client
 
-from flcore.trainmodel.models import *
+from system.flcore.trainmodel.models import *
 
-from flcore.utils_core.buffer_utils import ImagePool
-from flcore.utils_core.protonet_utils import ProtoNet_Loss, OnPro_Loss
+from system.flcore.utils_core.buffer_utils import ImagePool
+from system.flcore.utils_core.protonet_utils import ProtoNet_Loss, OnPro_Loss
 
 
 class clientSTGM(Client):

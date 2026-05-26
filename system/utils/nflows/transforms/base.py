@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import nn
 
-import utils.nflows.utils.typechecks as check
+import system.utils.nflows.utils.typechecks as check
 
 
 class InverseNotAvailable(Exception):

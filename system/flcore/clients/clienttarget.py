@@ -1,7 +1,7 @@
 import numpy as np
 import time
-from flcore.clients.clientbase import Client
-from flcore.utils_core.target_utils import *
+from system.flcore.clients.clientbase import Client
+from system.flcore.utils_core.target_utils import *
 
 
 class clientTARGET(Client):

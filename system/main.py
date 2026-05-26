@@ -9,39 +9,41 @@ import numpy as np
 import torchvision
 import json
 import wandb
+
 from argparse import Namespace
 from types import SimpleNamespace
 
-from flcore.servers.serveravg import FedAvg
-from flcore.servers.serverala import FedALA
-from flcore.servers.serverdbe import FedDBE
-from flcore.servers.serveras import FedAS
-from flcore.servers.serverweit import FedWeIT
-from flcore.servers.serveraffcl import FedAFFCL
-from flcore.servers.servertarget import FedTARGET
-from flcore.servers.serverl2p import FedL2P
-from flcore.servers.serverPILORA import PILORA
+from system.flcore.servers.serveravg import FedAvg
+from system.flcore.servers.serverala import FedALA
+from system.flcore.servers.serverdbe import FedDBE
+from system.flcore.servers.serveras import FedAS
+from system.flcore.servers.serverweit import FedWeIT
+from system.flcore.servers.serveraffcl import FedAFFCL
+from system.flcore.servers.servertarget import FedTARGET
+from system.flcore.servers.serverl2p import FedL2P
+from system.flcore.servers.serverPILORA import PILORA
 
-from flcore.servers.serverLANDER import LANDERServer
-from flcore.servers.serverGLFC import GLFCServer
+from system.flcore.servers.serverLANDER import LANDERServer
+from system.flcore.servers.serverGLFC import GLFCServer
 
-from flcore.trainmodel.models import *
+from system.flcore.trainmodel.models import *
 
-from flcore.trainmodel.AFFCL_models import AFFCLModel
-from flcore.servers.serverstgm import FedSTGM
-from flcore.servers.serverfcil import FedFCIL
+from system.flcore.trainmodel.AFFCL_models import AFFCLModel
+from system.flcore.servers.serverstgm import FedSTGM
+from system.flcore.servers.serverfcil import FedFCIL
 
-from flcore.trainmodel.bilstm import *
-from flcore.trainmodel.alexnet import *
-from flcore.trainmodel.mobilenet_v2 import *
-from flcore.trainmodel.transformer import *
-from flcore.trainmodel.vit_prompt_l2p import *
-from flcore.trainmodel.PILORA.VLT import *
-from flcore.trainmodel.PILORA.VITLORA import vitlora
+from system.flcore.trainmodel.bilstm import *
+from system.flcore.trainmodel.alexnet import *
+from system.flcore.trainmodel.mobilenet_v2 import *
+from system.flcore.trainmodel.transformer import *
+from system.flcore.trainmodel.vit_prompt_l2p import *
+from system.flcore.trainmodel.PILORA.VLT import *
+from system.flcore.trainmodel.PILORA.VITLORA import vitlora
 
 warnings.simplefilter("ignore")
+
 torch.manual_seed(0)
-import torch
+
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
 
@@ -201,7 +203,7 @@ def run(args):
         else:
             args.start_round = 0
         try:
-            from utils.partition_viz import visualize_and_print_partition
+            from system.utils.partition_viz import visualize_and_print_partition
             visualize_and_print_partition(server, args, fig_dir="figures")
         except Exception as e:
             print(f"[WARN] Partition visualization failed: {e}")
@@ -244,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument('--resume', action='store_true', help='Resume training from checkpoint')
     parser.add_argument('--ckpt_path', type=str, default='', help='Checkpoint path')
     parser.add_argument('--out_folder', type=str, default='./results/', help='Output folder')
-
+    parser.add_argument("--measure_drift", type=bool, default=False, help="Measure representation drift during training")
     parser.add_argument('--device_id', type=str, default='0', help='cuda device id')
 
     parser.add_argument('--partition_options',

@@ -10,11 +10,11 @@ import copy
 import time
 import random
 from datetime import datetime
-# from utils.data_utils import *
-from flcore.metrics.average_forgetting import metric_average_forgetting
+# from system.utils.data_utils import *
+from system.flcore.metrics.average_forgetting import metric_average_forgetting
 
 import time
-from utils.rich_progress import RichRoundLogger
+from system.utils.rich_progress import RichRoundLogger
 
 # --- at top of file ---
 import torch
@@ -95,7 +95,7 @@ class Server(object):
         """
         Save GLOBAL model checkpoint.
         """
-        ckpt_dir = os.path.join("checkpoints", self.dataset, self.algorithm)
+        ckpt_dir = os.path.join("checkpointsNewGlobal", self.dataset, self.algorithm)
         os.makedirs(ckpt_dir, exist_ok=True)
 
         ckpt_path = os.path.join(ckpt_dir, f"{tag}_round_{glob_iter}.pth")
@@ -801,7 +801,7 @@ class Server(object):
             print(f"Creating client {i} ...")
 
             if self.args.partition_options == "tuan":
-                from utils.data_utils import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                from system.utils.data_utils import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
 
                 if self.args.dataset == 'IMAGENET1k':
                     train_data, label_info = read_client_data_FCL_imagenet1k(i, task=0, classes_per_task=self.args.cpt, count_labels=True)
@@ -813,7 +813,7 @@ class Server(object):
                     raise NotImplementedError("Not supported dataset")
 
             elif self.args.partition_options == "hetero":
-                from utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
 
                 if self.args.dataset == 'IMAGENET1k':
                     train_data, label_info = read_client_data_FCL_imagenet1k(i, task=0, classes_per_task=self.args.cpt, count_labels=True,

@@ -1,8 +1,8 @@
 # system/flcore/servers/serverGLFC.py
 import copy
 import torch
-from flcore.servers.serverbase import Server
-from flcore.clients.clientGLFC import clientGLFC
+from system.flcore.servers.serverbase import Server
+from system.flcore.clients.clientGLFC import clientGLFC
 
 class GLFCServer(Server):
     """

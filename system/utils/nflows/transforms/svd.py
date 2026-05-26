@@ -4,8 +4,8 @@ from torch import nn
 from torch.nn import functional as F
 from torch.nn import init
 
-from utils.nflows.transforms.linear import Linear
-from utils.nflows.transforms.orthogonal import HouseholderSequence
+from system.utils.nflows.transforms.linear import Linear
+from system.utils.nflows.transforms.orthogonal import HouseholderSequence
 
 
 class SVDLinear(Linear):

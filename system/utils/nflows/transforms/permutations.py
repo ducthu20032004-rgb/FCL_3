@@ -2,8 +2,8 @@
 
 import torch
 
-from utils.nflows.transforms.base import Transform
-import utils.nflows.utils.typechecks as check
+from system.utils.nflows.transforms.base import Transform
+import system.utils.nflows.utils.typechecks as check
 
 
 class Permutation(Transform):
