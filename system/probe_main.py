@@ -16,7 +16,7 @@ from system.utilities_probe.utils import gpu_information_summary, set_seed
 from system.task_data_loader.scenarios import TaskConfig, SimpleScenario
 import wandb
 from torch.utils.data import Dataset
-from system.utils.data_utils import read_client_data_FCL_cifar10
+from system.utils.data_utils_mine import read_client_data_FCL_cifar10
 
 logger = logging.getLogger(__name__)
 BLOCK_NAMES = ["block0", "block1", "block2", "block3", "block4"]

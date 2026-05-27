@@ -126,7 +126,7 @@ class Client(object):
             train_data = read_client_data_FCL_cifar100(self.id, task=task, classes_per_task=self.args.cpt, count_labels=False, train=True)
         elif self.args.dataset == 'CIFAR10':
             train_data = read_client_data_FCL_cifar10(self.id, task=task, classes_per_task=self.args.cpt, count_labels=False, train=True)
-        
+            #train_data,_ = read_client_data_FCL_cifar10(self.id, task=task, classes_per_task=self.args.cpt, count_labels=False, alpha=0.7,seed = 42,task_disorder=0.6)
         return DataLoader(train_data, batch_size, drop_last=True, shuffle=True)
 
     def load_test_data(self, task, batch_size=None):

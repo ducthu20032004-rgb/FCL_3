@@ -31,7 +31,7 @@ from torch.utils.data import TensorDataset
 # =======================
 # >>>>> HYPER-PARAMS <<<<<
 # =======================
-SEED: int = 7                 # global seed for the partitioner
+SEED: int = 42                 # global seed for the partitioner
 TOTAL_CLIENTS: int = 10       # MUST equal your hparams["num_clients"]
 ALPHA: float = 0.3            # Dirichlet alpha (per-class -> clients). Smaller => more skew.
 TASK_DISORDER: float = 0    # in [0,1]; 0: same task order as master, 1: random permutation

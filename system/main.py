@@ -248,14 +248,14 @@ if __name__ == "__main__":
     parser.add_argument('--out_folder', type=str, default='./results/', help='Output folder')
     parser.add_argument("--measure_drift", type=bool, default=False, help="Measure representation drift during training")
     parser.add_argument('--device_id', type=str, default='0', help='cuda device id')
-
+    parser.add_argument('--dir',type = str,default='C:\Thu\FCL')
     parser.add_argument('--partition_options',
         type=str,
         choices=["tuan", "hetero"],
         default="hetero",
         help="Data partition scheme: 'tuan' uses the repo's class-order slicing; 'hetero' are heterogeneous data partitioning."
     )
-
+    parser.add_argument('--wandb_drift_every_round', type=bool, default=True, help='Log drift metrics every round')
     # --- data partition knobs (task-level permutation) ---
     parser.add_argument('--alpha', type=float, default=0.3,
                         help='Dirichlet alpha for per-class split across clients (smaller = more skew).')
@@ -299,7 +299,7 @@ if __name__ == "__main__":
     if args.nt is not None:
         cfdct['num_tasks'] = args.nt
 
-
+    cfdct['dir'] = args.dir
     cfdct['nt'] = args.nt
     cfdct['wandb'] = args.wandb
     cfdct['offlog'] = args.offlog
