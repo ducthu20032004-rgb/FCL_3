@@ -867,6 +867,28 @@ def measure_all_representation_drift(args):
 
     logger.info(f'\n  Hoàn thành! CSV → {output_file}')
 
+def get_shared_probe_dataset(
+    datadir='./dataset/cifar10-classes/',
+    classes=list(range(10)),
+    images_per_class=100,
+    train_images_per_class=5000,
+):
+    x_list, y_list = [], []
+    for cls in classes:
+        data_file = datadir + str(cls) + '.npy'
+        data = np.load(data_file)
+        # Lấy từ phần test (sau train split)
+        test_data = data[train_images_per_class : train_images_per_class + images_per_class]
+        x_list.append(test_data)
+        y_list.append(np.full(images_per_class, cls, dtype=np.int64))
+
+    x = torch.tensor(np.concatenate(x_list), dtype=torch.float32)
+    y = torch.tensor(np.concatenate(y_list), dtype=torch.long)
+    return Transform_dataset(x, y)
+import os
+import itertools
+import torch
+import wandb
 
 def measure_all_drift_follow_task_client_pair(args):
     output_file = f'./outputs/client_representation_drift-{args.partition_options}-{args.backbone}.csv'
@@ -874,18 +896,18 @@ def measure_all_drift_follow_task_client_pair(args):
     if not os.path.isfile(output_file):
         with open(output_file, 'w') as f:
             f.write('block_idx,client1,client2,t,'
-                    'cka,sigma,eps,' 
+                    'cka,sigma,eps,'
                     'cosine_similarity,'
-                    'align@10,align@15,align@20,align@30,align@50,align@75\n'
-            )
+                    'align@10,align@20\n')
 
     client_pairs = list(itertools.combinations(range(10), 2))
-    num_blocks = 5
+    num_blocks   = 5
+    topk_list    = [10, 20]
 
     total = args.num_tasks * len(client_pairs) * num_blocks
     done  = 0
-    #root = "/kaggle/working/final_results"   # Kaggle chuẩn
-    root = "result_client_pair"  # local
+
+    root = "result_client_pair1"
     os.makedirs(root, exist_ok=True)
     print(f"Root directory for results: {root}")
 
@@ -895,18 +917,22 @@ def measure_all_drift_follow_task_client_pair(args):
                     f'   ({len(client_pairs)} client-pairs × {num_blocks} blocks)')
         logger.info('=' * 60)
         args.task = task_id
+
         pair_scatters = {
-            (client, client_prime): {
-                block_idx: ScatterLogger(f"{root}/block{block_idx}/clientpair_{client}_{client_prime}")
-                for block_idx in range(num_blocks)
+            (c, cp): {
+                b: ScatterLogger(f"{root}/block{b}/clientpair_{c}_{cp}")
+                for b in range(num_blocks)
             }
-            for (client, client_prime) in client_pairs
+            for (c, cp) in client_pairs
         }
+
         for (client, client_prime) in client_pairs:
             scatters = pair_scatters[(client, client_prime)]
             logger.info(f'  ┌── Client pair ({client}, {client_prime})')
+
             ckpt_client       = get_model_path_no_round(args.saving_dir, client,       task_id)
             ckpt_client_prime = get_model_path_no_round(args.saving_dir, client_prime, task_id)
+
             skip = False
             for ckpt in [ckpt_client, ckpt_client_prime]:
                 if not os.path.isfile(ckpt):
@@ -920,122 +946,84 @@ def measure_all_drift_follow_task_client_pair(args):
             logger.info(f'  │  model_c  ← {ckpt_client}')
             logger.info(f'  │  model_c\' ← {ckpt_client_prime}')
 
-            test_data_c = read_client_data_FCL_cifar10(
-                client, task=task_id,
-                classes_per_task=args.cpt,
-                count_labels=False, train=False
-            )
-            test_data_cprime = read_client_data_FCL_cifar10(
-                client_prime, task=task_id,
-                classes_per_task=args.cpt,
-                count_labels=False, train=False
-            )
+            shared_probe  = get_shared_probe_dataset()
+            model_head_c  = load_model_with_head(ckpt_client,       num_classes=args.classes)
             model_head_cp = load_model_with_head(ckpt_client_prime, num_classes=args.classes)
-            model_head_c = load_model_with_head(ckpt_client, num_classes=args.classes)
-            loader_cprime = _make_loader(test_data_cprime)
-            loader_c      = _make_loader(test_data_c)
-            logits_cprime_list = []
-            logits_c_list = []
+            loader_c      = _make_loader(shared_probe)
+            loader_cp     = _make_loader(shared_probe)
 
-            for x_tp, _ in loader_cprime:  # chỉ lấy input
-                x_tp = x_tp.to(DEVICE)
-                logits_cprime_list.append(model_head_cp(x_tp).detach().cpu())
+            logits_c_list  = []
+            logits_cp_list = []
+            for x, _ in loader_c:
+                logits_c_list.append(model_head_c(x.to(DEVICE)).detach().cpu())
+            for x, _ in loader_cp:
+                logits_cp_list.append(model_head_cp(x.to(DEVICE)).detach().cpu())
 
-            for x_t, _ in loader_c:  # chỉ lấy input
-                x_t = x_t.to(DEVICE)
-                logits_c_list.append(model_head_c(x_t).detach().cpu())
+            logits_c  = torch.cat(logits_c_list,  dim=0)
+            logits_cp = torch.cat(logits_cp_list, dim=0)
+            cos_sim   = torch.nn.functional.cosine_similarity(logits_c, logits_cp, dim=1).mean().item()
 
-            logits_cprime = torch.cat(logits_cprime_list, dim=0)
-            logits_c      = torch.cat(logits_c_list, dim=0)
-
-            cos_sin = torch.nn.functional.cosine_similarity(logits_cprime, logits_c, dim=1)
             for num_block in range(num_blocks):
                 target_layer = f'block{num_block}'
-                scatter = scatters[num_block]
+                scatter      = scatters[num_block]
                 try:
-                    feat_c  = compute_feature_resnet18(
-                        model_c,      task_id, test_data_c,      target_layer, args.seed, args)
-                    feat_cp = compute_feature_resnet18(
-                        model_cprime, task_id, test_data_cprime, target_layer, args.seed, args)
+                    feat_c  = compute_feature_resnet18(model_c,      task_id, shared_probe, target_layer, args.seed, args)
+                    feat_cp = compute_feature_resnet18(model_cprime, task_id, shared_probe, target_layer, args.seed, args)
 
-                    if num_block == 0:
-                        width_c = width_cp = float('nan')
-                    else:
-                        width_c  = compute_width(model_c,      num_block - 1)
-                        width_cp = compute_width(model_cprime, num_block - 1)
+                    sigma        = compute_sigma(feat_c, feat_cp)
+                    eps          = compute_eps(feat_c, feat_cp)
+                    _, cka       = compute_cka(feat_c, feat_cp)
 
-                    eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_c)
-                    sigma  = compute_sigma(feat_c, feat_cp)
-                    eps    = compute_eps(feat_c, feat_cp)
-                    hsic, cka = compute_cka(feat_c, feat_cp)
-                    
-                    linear_cka = TorchCKA(device=DEVICE).linear_CKA(torch.from_numpy(feat_c).float().to(DEVICE), torch.from_numpy(feat_cp).float().to(DEVICE))
-                    kernel_cka = TorchCKA(device=DEVICE).kernel_CKA(torch.from_numpy(feat_c).float().to(DEVICE), torch.from_numpy(feat_cp).float().to(DEVICE), sigma=None)
-                    topk_list = [5, 10, 20, 50, 100, 150]
-                    align_score = {}
-                    for list_ in topk_list:
-                        align_score[list_], _ = compute_alignment_from_arrays(
-                            feat_c, feat_cp, "mutual_knn", topk=list_, precise=True)
+                    align_scores = {}
+                    for k in topk_list:
+                        align_scores[k], _ = compute_alignment_from_arrays(
+                            feat_c, feat_cp, "mutual_knn", topk=k, precise=True)
+
                     done += 1
-                    progress = f'[{done}/{total}]'
                     logger.info(
-                        f'  │  {progress} {target_layer} | '
-                        f'cosine_similarity={cos_sin.mean().item():.4f}  '
-                        f'σ={sigma:.4f}  ε={eps:.4f}  CKA={cka:.4f} '
-                        f'non-linear_CKA={kernel_cka - linear_cka:.4f} kernel_CKA={kernel_cka:.4f} '
-                        f'dim_featuremax/featuremin = {eta_max/eta_min:.4f} '
-                        f'align@20={align_score[20]:.4f} align@100={align_score[100]:.4f} '
-                        
+                        f'  │  [{done}/{total}] {target_layer} | '
+                        f'cos_sim={cos_sim:.4f}  σ={sigma:.4f}  '
+                        f'ε={eps:.4f}  CKA={cka:.4f}  '
+                        f'align@10={align_scores[10]:.4f}  align@20={align_scores[20]:.4f}'
                     )
-                    scatter.log_pair("task_vs_cosine_similarity", task_id, cos_sin.mean().item())
-                    scatter.log_pair("task_vs_sigma", task_id, sigma)
-                    scatter.log_pair("task_vs_eps", task_id, eps)
-                    scatter.log_pair("task_vs_cka", task_id, cka)
-                    scatter.log_pair("cosine_similarity_vs_align100", cos_sin.mean().item(), align_score[100])
-                    scatter.log_pair("non_linear_cka_vs_cosine_similarity", kernel_cka - linear_cka, cos_sin.mean().item())
-                    scatter.log_pair("sigma_vs_eps",       sigma,              eps)
 
-                    scatter.log_pair("cka_vs_eps",         cka,                eps)                        
-                    scatter.log_pair("cka_vs_align20",     cka,                align_score[20])
-                    scatter.log_pair("cka_vs_align100",    cka,                align_score[100])
-                    scatter.log_pair("cka_vs_align150",    cka,                align_score[150])
-                    scatter.log_pair("cka_vs_sigma",       cka,                sigma)
-
-
+                    # scatter logs
+                    scatter.log_pair("task_vs_cka",    task_id, cka)
+                    scatter.log_pair("task_vs_eps",    task_id, eps)
+                    scatter.log_pair("task_vs_sigma",  task_id, sigma)
+                    scatter.log_pair("cka_vs_eps",     cka,     eps)
+                    scatter.log_pair("cka_vs_align10", cka,     align_scores[10])
+                    scatter.log_pair("cka_vs_align20", cka,     align_scores[20])
 
                     line = (
-                                
                         f'{num_block},{client},{client_prime},{task_id},'
-                        f'{cka},{sigma},{eps},' 
-                        f'{cos_sin.mean().item():.4f},'
-                        f'{align_score[100]:.4f},{align_score[150]:.4f}\n'
+                        f'{cka:.6f},{sigma:.6f},{eps:.6f},'
+                        f'{cos_sim:.4f},'
+                        f'{align_scores[10]:.4f},{align_scores[20]:.4f}\n'
                     )
-
-                    # ✍️ write
                     with open(output_file, 'a') as f:
                         f.write(line)
                         f.flush()
 
                     if args.use_wandb:
                         wandb.log({
-                            'client':        client,
-                            'block':         num_block,
-                            't':             task_id,
-                            'tprime':        client_prime,
-                            'sigma':         sigma,
-                            'eps':           eps,
-                            'eta_min_norm':  eta_min_n,
-                            'eta_max_norm':  eta_max_n,
-                            'width_t':       width_c,
-                            'width_tprime':  width_cp,
-                            'pair':          f'({client},{client_prime})',
-                            'client_block':  f'c{client}_b{k}',
+                            'client':       client,
+                            'client_prime': client_prime,
+                            'block':        num_block,
+                            't':            task_id,
+                            'sigma':        sigma,
+                            'eps':          eps,
+                            'cka':          cka,
+                            'cos_sim':      cos_sim,
+                            'align@10':     align_scores[10],
+                            'align@20':     align_scores[20],
+                            'pair':         f'({client},{client_prime})',
                         })
 
                 except Exception as e:
                     logger.error(
-                        f'  │  [SKIP] client={client} {target_layer} '
-                        f't={task_id} | {e}'
+                        f'  │  [SKIP] pair=({client},{client_prime}) '
+                        f'{target_layer} t={task_id} | {e}'
                     )
                     continue
 
