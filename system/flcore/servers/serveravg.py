@@ -487,7 +487,7 @@ class FedAvg(Server):
                     # === Ghi CSV (thay thế / bổ sung wandb) ===
                     import csv, os
 
-                    csv_path = "/kaggle/working/drift_results.csv"
+                    csv_path = "/kaggle/working/FCL_3/drift_results.csv"
                     fieldnames = ["round", "task", "client", "block",
                                 "drift_trained", "drift_aggre", "drift_global",
                                 "cka_trained", "cka_aggre", "cka_global"]

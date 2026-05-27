@@ -8,15 +8,15 @@
     "device_id": "0",
     "dataset": "CIFAR10",
     "num_classes": 10,
-    "model": "CNN",
+    "model": "ResNet18",
     "batch_size": 32,
-    "local_learning_rate": 0.005,
+    "local_learning_rate": 0.001,
     "learning_rate_decay": false,
     "learning_rate_decay_gamma": 0.99,
-    "global_rounds": 500,
+    "global_rounds": 10,
     "local_epochs": 1,
     "algorithm": "FedALA",
-    "join_ratio": 0.8,
+    "join_ratio": 1,
     "random_join_ratio": false,
     "num_clients": 10,
     "prev": 0,
@@ -37,5 +37,5 @@
     "p":1,
 
     "non_iid":"dirichlet",
-    "alpha": 0.1
+    "alpha": 100
 }

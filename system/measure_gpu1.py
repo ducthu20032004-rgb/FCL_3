@@ -434,9 +434,9 @@ def measure_all_representation_drift(args):
                 'client,block,t,tprime,'
                 'sigma_old,eps_old,'          # FIX: thiếu dấu phẩy cuối
                 'cka_old,linear_cka_old,kernel_cka_old,'
-                'cka_curr,linear_cka_curr,kernel_cka_curr,'  # NEW
+                
                 'old_test_acc,current_test_acc,acc_t_on_head,forgetting_drop,'
-                'cosine_similarity,align150,'
+                'cosine_similarity,align10,'
                 'drift_neuron,cosine_neuron,overlap_at50,'          # NEW
                 'drift_per_acc_unit\n'                # NEW
             )
@@ -450,7 +450,7 @@ def measure_all_representation_drift(args):
     # key = (t, tprime, block_idx) → value = old_test_acc của round trước
     acc_history_old: dict = {}
 
-    for client_id in [9]:
+    for client_id in [0]:
         logger.info('=' * 60)
         logger.info(
             f'  CLIENT {client_id:>2} / {args.num_clients - 1}'
@@ -468,7 +468,7 @@ def measure_all_representation_drift(args):
             #     for block_idx in range(num_blocks)
             # }
 
-            for round_idx in [24]:
+            for round_idx in range(25):
                 logger.info(f'  ┌── Task pair ({t}, {tprime}), round {round_idx}')
 
                 ckpt_t  = get_model_path(args.saving_dir, client_id, t,      round_idx)
@@ -534,12 +534,12 @@ def measure_all_representation_drift(args):
                 #     logits_t, logits_tp_on_t, dim=1
                 # )
 
-                # # ── Accuracy ─────────────────────────────────────────────────
-                acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
-                # current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
-                old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
-                list_acc_matrix.append(acc_t_on_head)
-                drop_acc = max(list_acc_matrix) - old_test_acc
+                # # # ── Accuracy ─────────────────────────────────────────────────
+                # acc_t_on_head    = test_metrics(model_head_t,  loader_t,class_order=client_class_order, task_index=t)
+                # # current_test_acc = test_metrics(model_head_tp, loader_tprime,class_order=client_class_order, task_index=tprime)
+                # old_test_acc     = test_metrics(model_head_tp, loader_t,class_order=client_class_order, task_index=t)
+                # list_acc_matrix.append(acc_t_on_head)
+                # drop_acc = max(list_acc_matrix) - old_test_acc
                 # # ── Neuron importance (layer4[-1], fixed) ────────────────────
                 # target_layer_tp = [model_tprime.layer4[-1]]
                 # model_cam_curr  = BaseCAM(model_tprime, target_layer_tp)
@@ -597,12 +597,7 @@ def measure_all_representation_drift(args):
                             model_tprime, tprime, test_data_t, target_layer,
                             args.seed, args)
                         
-                        feat_t_curr = compute_feature_resnet18(
-                            model_eps_t, tprime, test_data_tprime, target_layer,
-                            args.seed, args)
-                        feat_tp_curr = compute_feature_resnet18(
-                            model_tprime, tprime, test_data_tprime, target_layer,
-                            args.seed, args)
+
 
                         # Cal Probe accuracy (linear head trên feature cũ)
                         # if block_idx == 0:
@@ -612,14 +607,14 @@ def measure_all_representation_drift(args):
                         #     width_tp = compute_width(model_tprime, block_idx - 1)
 
                         # eta_min, eta_max, eta_min_n, eta_max_n = compute_eta(feat_t_old)
-                        sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
+                        #sigma_old         = compute_sigma(feat_t_old, feat_tp_old)
                         eps_old           = compute_eps(feat_t_old, feat_tp_old)
-                        hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
+                        # hsic_val, cka_old = compute_cka(feat_t_old, feat_tp_old)
 
-                        # feat_t_tensor_old  = torch.from_numpy(feat_t_old).float().to(DEVICE)
-                        # feat_tp_tensor_old = torch.from_numpy(feat_tp_old).float().to(DEVICE)
-                        # cka_obj        = TorchCKA(device=DEVICE)
-                        # linear_cka_old     = cka_obj.linear_CKA(feat_t_tensor_old, feat_tp_tensor_old)
+                        feat_t_tensor_old  = torch.from_numpy(feat_t_old).float().to(DEVICE)
+                        feat_tp_tensor_old = torch.from_numpy(feat_tp_old).float().to(DEVICE)
+                        cka_obj        = TorchCKA(device=DEVICE)
+                        linear_cka_old     = cka_obj.linear_CKA(feat_t_tensor_old, feat_tp_tensor_old)
                         # kernel_cka_old     = cka_obj.kernel_CKA(feat_t_tensor_old, feat_tp_tensor_old, sigma=None)
 
                         # sigma_curr         = compute_sigma(feat_t_curr, feat_tp_curr)
@@ -634,11 +629,11 @@ def measure_all_representation_drift(args):
                         # kernel_cka_curr     = cka_obj.kernel_CKA(feat_t_tensor_curr, feat_tp_tensor_curr, sigma=None)
 
                         
-                        # topk_list  = [10,15, 20,30,50,75]
-                        # align_score = {}
-                        # for k in topk_list:
-                        #     align_score[k], _ = compute_alignment_from_arrays(
-                        #         feat_t_old, feat_tp_old, "mutual_knn", topk=k, precise=True)
+                        topk_list  = [10]
+                        align_score = {}
+                        for k in topk_list:
+                            align_score[k], _ = compute_alignment_from_arrays(
+                                feat_t_old, feat_tp_old, "mutual_knn", topk=k, precise=True)
 
                         # # ── Derived metrics ──────────────────────────────────
                         # cka_gap                 = float(kernel_cka_curr) - float(linear_cka_curr)
@@ -677,15 +672,16 @@ def measure_all_representation_drift(args):
                         #     f'drift_neuron={drift_neuron:.4f}  '
                         #     f'cosine_neuron={cosine_neuron:.4f}  '
                         #     f'overlap@{k_top}={overlap:.4f}  '
-                        #     f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}  gap_σ={gap_sigma:.4f}  gap_ε={gap_eps:.4f}  '
+                             #f'σ_old={sigma_old:.4f}  ε_old={eps_old:.4f}   '
+                            f'ε_old={eps_old:.4f}'
                         #     f'σ_curr={sigma_curr:.4f}  ε_curr={eps_curr:.4f}  '
-                        #     f'CKA_old={cka_old:.4f}  linear_CKA_old={float(linear_cka_old):.4f}  '
+                            f'linear_CKA_old={float(linear_cka_old):.4f}  '
                         #     f'kernel_CKA_old={float(kernel_cka_old):.4f}  '
                         #     f'CKA_curr={cka_curr:.4f}  linear_CKA_curr={float(linear_cka_curr):.4f}  '
                         #     f'kernel_CKA_curr={float(kernel_cka_curr):.4f}  '
                         #     f'cka_gap={cka_gap:.4f}  '
                                 # f'acc_probe={acc_probe*100:.2f}%  '
-                                f'forgetting={drop_acc*100:.4f}%'
+                                #f'forgetting={drop_acc*100:.4f}%'
                         #     f'residual(cka-overlap)={cka_vs_overlap_residual:.4f}  '
                         #     f'ratio={ratio_feature:.4f}  '
                         #     f'align@10={align_score[10]:.4f}  '
@@ -757,12 +753,12 @@ def measure_all_representation_drift(args):
 
                                 # # representation
                                 # f'{prefix}/cka': float(cka_old),
-                                # f'{prefix}/linear_cka': float(linear_cka_old),
+                                f'{prefix}/linear_cka': float(linear_cka_old),
                                 # f'{prefix}/kernel_cka': float(kernel_cka_old),
                                 # f'{prefix}/cka_curr': float(cka_curr),
                                 # f'{prefix}/linear_cka_curr': float(linear_cka_curr),
                                 # f'{prefix}/kernel_cka_curr': float(kernel_cka_curr),
-                                # f'{prefix}/align10': align_score[10],
+                                f'{prefix}/align10': align_score[10],
                                 # f'{prefix}/align15': align_score[15],
                                 # f'{prefix}/align20': align_score[20],
                                 # f'{prefix}/align30': align_score[30],
@@ -774,7 +770,7 @@ def measure_all_representation_drift(args):
                                 # f'{prefix}/ratio_feature': ratio_feature,
                                 # f'{prefix}/width_t': width_t,
                                 # f'{prefix}/width_tprime': width_tp,
-                                f'{prefix}/sigma_old': sigma_old,
+                                #f'{prefix}/sigma_old': sigma_old,
                                 f'{prefix}/eps_old': eps_old,
                                 # f'{prefix}/sigma_curr': sigma_curr,
                                 # f'{prefix}/eps_curr': eps_curr,
