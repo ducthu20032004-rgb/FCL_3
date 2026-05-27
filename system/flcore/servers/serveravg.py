@@ -395,7 +395,7 @@ class FedAvg(Server):
 
                             if not hasattr(client, "_model_after_local"):
                                 continue
-                            if client.id in [0,1,2,3,4]:
+                            if client.id in [5,6,7,8,9]:
                                 continue
                             test_data = read_client_data_FCL_cifar10(
                                 client.id, task=task,
