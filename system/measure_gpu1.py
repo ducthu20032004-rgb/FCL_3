@@ -1036,37 +1036,23 @@ def measure_follow_training(args):
     else :
         root = '/kaggle/working'
     output_file = (
-        f'{root}/representation_drift_temporal_25_4'
+        f'{root}/representation_drift_temporal_252_4'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
-    if not os.path.isfile(output_file):
-        with open(output_file, 'a') as f:
-            f.write(
-                'client,block,task,round,FM,accuracy_old,'
-                'sigma_current,eps_current,'
-                'sigma_old,eps_old,cosine,'
-                'linearCKA,non-linearCKA,kernelCKA,bwt,'
-                'accuracy_current\n'
-            )
-    # ── Chỉ ghi header nếu file CHƯA tồn tại hoặc rỗng ──────────────────
     header = (
-        'client,block,task,round,FM,accuracy_old,'
-        'sigma_current,eps_current,'
-        'sigma_old,eps_old,cosine,'
-        'linearCKA,non-linearCKA,kernelCKA,bwt,'
-        'accuracy_current\n'
+        'client,block,task,round,'
+        'eps_current,cka_curr,align10_curr\n'
     )
-    
+
     write_header = (
         not os.path.isfile(output_file)
         or os.path.getsize(output_file) == 0
     )
 
-    with open(output_file, 'a') as f:   # <-- 'a' thay vì 'w' để không xóa data cũ
-        if write_header:
+    if write_header:
+        with open(output_file, 'a') as f:
             f.write(header)
-
 
     output_file_v2 = (
         f'{root}/forgetting_detail_client9'
@@ -1088,7 +1074,7 @@ def measure_follow_training(args):
             f.write(header_v2)
     num_blocks = 5
 
-    for client_id in [9]:
+    for client_id in [0]:
         logger.info('=' * 60)
         logger.info(f'  CLIENT {client_id:>2} / {args.num_clients - 1}')
         logger.info('=' * 60)
@@ -1097,41 +1083,41 @@ def measure_follow_training(args):
         round_global = 0
         client_class_order = all_class_orders[client_id][:10]
         # ── TRƯỚC vòng for task — init bảng theo block ──────────────────────
-        if args.use_wandb:
-            block_tables = {
-                block_idx: {
-                    "table_eps":                  wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_sigma":                wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cka":                  wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_align":                wandb.Table(columns=["align150", "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cosine":               wandb.Table(columns=["cosine",   "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_eps_forgetting":       wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_sigma_forgetting":     wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cka_forgetting":       wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_align_forgetting":     wandb.Table(columns=["align150", "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cosine_forgetting":    wandb.Table(columns=["cosine",   "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_eps_old":              wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_sigma_old":            wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_cka_old":              wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
-                    "table_eps_forgetting_old":   wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_sigma_forgetting_old": wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_cka_forgetting_old":   wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
-                    "table_old_curr_eps_acc":     wandb.Table(columns=["epsilon",  "acc",        "type", "round"], log_mode="MUTABLE"),
-                    "table_old_curr_eps_fgt":     wandb.Table(columns=["epsilon",  "forgetting", "type", "round"], log_mode="MUTABLE"),
-                    "table_kernel_old":           wandb.Table(columns=["kernel_cka", "accuracy", "task"], log_mode="MUTABLE"),
-                    "table_nl_cka_old":           wandb.Table(columns=["nl_cka", "accuracy", "task"], log_mode="MUTABLE")
-                }
-                for block_idx in range(num_blocks)
-            }
+        # if args.use_wandb:
+        #     block_tables = {
+        #         block_idx: {
+        #             "table_eps":                  wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_sigma":                wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_cka":                  wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_align":                wandb.Table(columns=["align150", "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_cosine":               wandb.Table(columns=["cosine",   "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_eps_forgetting":       wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_sigma_forgetting":     wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_cka_forgetting":       wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_align_forgetting":     wandb.Table(columns=["align150", "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_cosine_forgetting":    wandb.Table(columns=["cosine",   "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_eps_old":              wandb.Table(columns=["epsilon",  "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_sigma_old":            wandb.Table(columns=["sigma",    "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_cka_old":              wandb.Table(columns=["cka",      "accuracy",   "task"], log_mode="MUTABLE"),
+        #             "table_eps_forgetting_old":   wandb.Table(columns=["epsilon",  "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_sigma_forgetting_old": wandb.Table(columns=["sigma",    "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_cka_forgetting_old":   wandb.Table(columns=["cka",      "forgetting", "task"], log_mode="MUTABLE"),
+        #             "table_old_curr_eps_acc":     wandb.Table(columns=["epsilon",  "acc",        "type", "round"], log_mode="MUTABLE"),
+        #             "table_old_curr_eps_fgt":     wandb.Table(columns=["epsilon",  "forgetting", "type", "round"], log_mode="MUTABLE"),
+        #             "table_kernel_old":           wandb.Table(columns=["kernel_cka", "accuracy", "task"], log_mode="MUTABLE"),
+        #             "table_nl_cka_old":           wandb.Table(columns=["nl_cka", "accuracy", "task"], log_mode="MUTABLE")
+        #         }
+        #         for block_idx in range(num_blocks)
+        #     }
         for task in range(0, 5):
             logger.info(f'  ── Task {task}')
 
-            scatters = {
-                block_idx: ScatterLogger(
-                    f"23_Follow_training_logs/client_{client_id}/block{block_idx}/task_{task}"
-                )
-                for block_idx in range(num_blocks)
-            }
+            # scatters = {
+            #     block_idx: ScatterLogger(
+            #         f"23_Follow_training_logs/client_{client_id}/block{block_idx}/task_{task}"
+            #     )
+            #     for block_idx in range(num_blocks)
+            # }
 
             # Load old loaders 1 lần cho cả task
             old_loaders = {}
@@ -1170,10 +1156,10 @@ def measure_follow_training(args):
 
                 model_curr      = load_resnet18_from_checkpoint(ckpt_curr, load_head=False)
                 model_prev      = load_resnet18_from_checkpoint(ckpt_prev, load_head=False)
-                model_head_curr = load_model_with_head(ckpt_curr, num_classes=10)
-                model_head_prev = load_model_with_head(ckpt_prev, num_classes=10)
-                if task > 0:
-                    model_prev_task = load_resnet18_from_checkpoint(ckpt_prev_task,load_head=False)
+                # model_head_curr = load_model_with_head(ckpt_curr, num_classes=10)
+                # model_head_prev = load_model_with_head(ckpt_prev, num_classes=10)
+                # if task > 0:
+                #     model_prev_task = load_resnet18_from_checkpoint(ckpt_prev_task,load_head=False)
                 logger.info(f'  │  model_curr ← {ckpt_curr}')
                 logger.info(f'  │  model_prev ← {ckpt_prev}')
 
@@ -1190,13 +1176,13 @@ def measure_follow_training(args):
 
                 print("Unique labels:", torch.unique(all_labels))
                 has_old = task > 0
-                if has_old:
-                    test_data_old = read_client_data_FCL_cifar10(
-                        client_id, task=task - 1, classes_per_task=args.cpt,
-                        count_labels=False, train=False
-                    )
-                    loader_old = _make_loader(test_data_old)
-                    all_labels = []
+                # if has_old:
+                #     test_data_old = read_client_data_FCL_cifar10(
+                #         client_id, task=task - 1, classes_per_task=args.cpt,
+                #         count_labels=False, train=False
+                #     )
+                #     loader_old = _make_loader(test_data_old)
+                #     all_labels = []
 
                     # for _, y in loader_old:
                     #     all_labels.append(y)
@@ -1205,49 +1191,49 @@ def measure_follow_training(args):
 
                     # print("Unique labels:", torch.unique(all_labels))
 
-                logits_curr_list, logits_prev_list = [], []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    logits_curr_list.append(model_head_curr(x).detach().cpu())
-                    logits_prev_list.append(model_head_prev(x).detach().cpu())
+                # logits_curr_list, logits_prev_list = [], []
+                # for x, _ in loader_curr:
+                #     x = x.to(DEVICE)
+                #     logits_curr_list.append(model_head_curr(x).detach().cpu())
+                #     logits_prev_list.append(model_head_prev(x).detach().cpu())
 
-                logits_curr = torch.cat(logits_curr_list, dim=0)
-                logits_prev = torch.cat(logits_prev_list, dim=0)
-                cos_sim = torch.nn.functional.cosine_similarity(logits_curr, logits_prev, dim=1)
-                row = {}
-                acc_curr_on_curr = test_metrics(model_head_curr, loader_curr,
-                                        class_order=client_class_order,
-                                        task_index=task)
-                acc_curr_on_old  = test_metrics(model_head_curr, loader_old,
-                                                class_order=client_class_order,
-                                                task_index=task - 1) if has_old else float('nan')
-                row[task] = acc_curr_on_curr
+                # logits_curr = torch.cat(logits_curr_list, dim=0)
+                # logits_prev = torch.cat(logits_prev_list, dim=0)
+                # cos_sim = torch.nn.functional.cosine_similarity(logits_curr, logits_prev, dim=1)
+                # row = {}
+                # acc_curr_on_curr = test_metrics(model_head_curr, loader_curr,
+                #                         class_order=client_class_order,
+                #                         task_index=task)
+                # acc_curr_on_old  = test_metrics(model_head_curr, loader_old,
+                #                                 class_order=client_class_order,
+                #                                 task_index=task - 1) if has_old else float('nan')
+                # row[task] = acc_curr_on_curr
 
-                if has_old:
-                    for old_task, old_loader in old_loaders.items():
-                        row[old_task] = test_metrics(model_head_curr, old_loader,
-                                                     class_order=client_class_order,
-                                                     task_index=old_task)
+                # if has_old:
+                #     for old_task, old_loader in old_loaders.items():
+                #         row[old_task] = test_metrics(model_head_curr, old_loader,
+                #                                      class_order=client_class_order,
+                #                                      task_index=old_task)
 
-                acc_matrix.append(row)
+                # acc_matrix.append(row)
                 
-                FM, per_task_forgetting, per_task_max_acc = compute_forgetting(acc_matrix=acc_matrix, current_task=task)
-                bwt = compute_bwt(accuracy_matrix=acc_matrix,task=task)
-                preds = []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    pred = model_head_curr(x).argmax(1)
-                    preds.append(pred.cpu())
+                # FM, per_task_forgetting, per_task_max_acc = compute_forgetting(acc_matrix=acc_matrix, current_task=task)
+                # bwt = compute_bwt(accuracy_matrix=acc_matrix,task=task)
+                # preds = []
+                # for x, _ in loader_curr:
+                #     x = x.to(DEVICE)
+                #     pred = model_head_curr(x).argmax(1)
+                #     preds.append(pred.cpu())
 
-                preds = torch.cat(preds)
-                #print(f"Range predict curr : {preds.min()}, {preds.max()}")
-                preds = []
-                for x, _ in loader_curr:
-                    x = x.to(DEVICE)
-                    pred = model_head_prev(x).argmax(1)
-                    preds.append(pred.cpu())
+                # preds = torch.cat(preds)
+                # #print(f"Range predict curr : {preds.min()}, {preds.max()}")
+                # preds = []
+                # for x, _ in loader_curr:
+                #     x = x.to(DEVICE)
+                #     pred = model_head_prev(x).argmax(1)
+                #     preds.append(pred.cpu())
 
-                preds = torch.cat(preds)
+                # preds = torch.cat(preds)
                 #print(f"Range predict old : {preds.min()}, {preds.max()}")
                 # pred_old = model_head_prev(loader_old).argmax(1)
                 # print(f"Range predict old : {pred_old.min()} , {pred_old.max()}") 
@@ -1304,35 +1290,35 @@ def measure_follow_training(args):
 
                 logger.info(
                     f'  │  task={task} round_idx={round_idx} round_global={round_global} | '
-                    f'acc_curr={acc_curr_on_curr*100:.2f}%  '
-                    f'FM={ f"{FM*100:.2f}%" if FM == FM else "N/A" }'
+                    # f'acc_curr={acc_curr_on_curr*100:.2f}%  '
+                    # f'FM={ f"{FM*100:.2f}%" if FM == FM else "N/A" }'
                 )
                 scalar_log = {}
                 double_log = {}
                 # ── Per-block metrics ────────────────────────────────────────
-                #for block_idx in range(num_blocks):
-                #     target_layer = f'block{block_idx}'
-                #     scatter      = scatters[block_idx]
+                for block_idx in [4]:
+                    target_layer = f'block{block_idx}'
+                    # scatter      = scatters[block_idx]
 
-                #     try:
-                #         # ── Features trên current task data (luôn có) ──────────
-                #         feat_curr_on_curr_data       = compute_feature_resnet18(model_curr, task, test_data_curr, target_layer, args.seed, args)
-                #         feat_prev_round_on_curr_data = compute_feature_resnet18(model_prev, task, test_data_curr, target_layer, args.seed, args)
+                    try:
+                        # ── Features trên current task data (luôn có) ──────────
+                        feat_curr_on_curr_data       = compute_feature_resnet18(model_curr, task, test_data_curr, target_layer, args.seed, args)
+                        feat_prev_round_on_curr_data = compute_feature_resnet18(model_prev, task, test_data_curr, target_layer, args.seed, args)
 
-                #         width_curr = compute_width(model_curr, block_idx - 1) if block_idx > 0 else float('nan')
-                #         width_prev = compute_width(model_prev, block_idx - 1) if block_idx > 0 else float('nan')
+                        # width_curr = compute_width(model_curr, block_idx - 1) if block_idx > 0 else float('nan')
+                        # width_prev = compute_width(model_prev, block_idx - 1) if block_idx > 0 else float('nan')
 
-                #         eta_min_on_curr_data, eta_max_on_curr_data, eta_min_n, eta_max_n = compute_eta(feat_curr_on_curr_data)
-                #         sigma_on_curr_data = compute_sigma(feat_curr_on_curr_data, feat_prev_round_on_curr_data)
-                #         eps_on_curr_data   = compute_eps(feat_curr_on_curr_data,   feat_prev_round_on_curr_data)
-                #         _, cka_on_curr_data = compute_cka(feat_curr_on_curr_data,  feat_prev_round_on_curr_data)
-                #         ratio_feat = eta_max_on_curr_data / eta_min_on_curr_data if eta_min_on_curr_data > 0 else float('nan')
+                        # eta_min_on_curr_data, eta_max_on_curr_data, eta_min_n, eta_max_n = compute_eta(feat_curr_on_curr_data)
+                        # sigma_on_curr_data = compute_sigma(feat_curr_on_curr_data, feat_prev_round_on_curr_data)
+                        eps_on_curr_data   = compute_eps(feat_curr_on_curr_data,   feat_prev_round_on_curr_data)
+                        _, cka_on_curr_data = compute_cka(feat_curr_on_curr_data,  feat_prev_round_on_curr_data)
+                        #ratio_feat = eta_max_on_curr_data / eta_min_on_curr_data if eta_min_on_curr_data > 0 else float('nan')
 
-                #         align_score_on_curr_data = {}
-                #         for k in [20, 100, 150]:
-                #             align_score_on_curr_data[k], _ = compute_alignment_from_arrays(
-                #                 feat_curr_on_curr_data, feat_prev_round_on_curr_data, "mutual_knn", topk=k, precise=True
-                #             )
+                        align_score_on_curr_data = {}
+                        for k in [10,20]:
+                            align_score_on_curr_data[k], _ = compute_alignment_from_arrays(
+                                feat_curr_on_curr_data, feat_prev_round_on_curr_data, "mutual_knn", topk=k, precise=True
+                            )
 
                 #         # ── Metrics trên old task data (chỉ khi has_old) ───────
                 #         NAN = float('nan')
@@ -1370,74 +1356,78 @@ def measure_follow_training(args):
                         # def _fmt(v):
                         #     return f'{v:.4f}' if v == v else 'nan'
 
-                        # logger.info(
-                        #     # f'  │  [{block_idx+1}/{num_blocks}] {target_layer} | '
-                        #     f'FM={_fmt(FM*100)}% '
-                        #     f'bwt={bwt}, '
-                        #     # f'cosine={cos_sim.mean().item():.4f}  '
-                        #     # f'σ_curr={sigma_on_curr_data:.4f}  ε_curr={eps_on_curr_data:.4f}  '
-                        #     # f'σ_old={_fmt(sigma_on_old_data)}  ε_old={_fmt(eps_on_old_data)}  '
-                        #     # f'linCKA={_fmt(linear_cka)}  nlCKA={_fmt(nl_cka)}  kCKA={_fmt(kernel_cka)}  '
-                        #     # f'dim={_fmt(ratio_feat)}  '
-                        #     # f'align@150_old={_fmt(align_old_150)}  '
-                        #     f'ACC_curr={acc_curr_on_curr*100:.2f}%  '
-                        #     f'ACC_old={_fmt(acc_curr_on_old*100) if has_old else "N/A"}  '
-                        # )
-
-                        # # ── CSV ─────────────────────────────────────────────────
-                        # with open(output_file, 'a') as f:
-                        #     def to_val(x):
-                        #         import torch
-                        #         return x.item() if isinstance(x, torch.Tensor) else x
-
-                        #     csv_row = [
-                        #         client_id, block_idx, task, round_idx, FM,
-                        #         # sigma_on_curr_data, eps_on_curr_data,
-                        #         # sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
-                        #         # to_val(linear_cka), to_val(nl_cka), to_val(kernel_cka), bwt,
-                        #         acc_curr_on_curr,
-                        #     ]
-                        #     f.write(','.join(map(str, csv_row)) + '\n')
-                with open(output_file_v2, 'a') as f:
-                    if task == 0:
-                        # Task 0: chỉ có acc_curr_on_curr, không có old task nào
-                        f.write(
-                            f'{client_id},'
-                            f'nan,'                         # task_old
-                            f'{task},'                      # task_current
-                            f'{round_idx},'
-                            f'{acc_curr_on_curr:.6f},'
-                            f'nan,'                         # acc_curr_on_old
-                            f'nan,'                         # forgetting_per_task
-                            f'nan,'                         # FM
-                            f'{bwt},'
-                            f'nan\n'                        # max_past_acc
+                        logger.info(
+                            # f'  │  [{block_idx+1}/{num_blocks}] {target_layer} | '
+                            # f'FM={_fmt(FM*100)}% '
+                            # f'bwt={bwt}, '
+                            # f'cosine={cos_sim.mean().item():.4f}  '
+                            #f'σ_curr={sigma_on_curr_data:.4f}  ε_curr={eps_on_curr_data:.4f}  '
+                                f'cka_curr={cka_on_curr_data:.4f}  '
+                                f'align@10_curr={align_score_on_curr_data.get(10, float("nan")):.4f}  '
+                                f'eps_curr={eps_on_curr_data:.4f}  '
+                            # f'σ_old={_fmt(sigma_on_old_data)}  ε_old={_fmt(eps_on_old_data)}  '
+                            # f'linCKA={_fmt(linear_cka)}  nlCKA={_fmt(nl_cka)}  kCKA={_fmt(kernel_cka)}  '
+                            # f'dim={_fmt(ratio_feat)}  '
+                            # f'align@150_old={_fmt(align_old_150)}  '
+                            # f'ACC_curr={acc_curr_on_curr*100:.2f}%  '
+                            # f'ACC_old={_fmt(acc_curr_on_old*100) if has_old else "N/A"}  '
                         )
-                    else:
-                        for old_task in range(task):
-                            f_per_task   = per_task_forgetting.get(old_task, float('nan'))
-                            max_past     = per_task_max_acc.get(old_task, float('nan'))
 
-                            # acc_curr_on_old: lấy từ row hiện tại của acc_matrix
-                            acc_on_old = acc_matrix[-1].get(old_task, float('nan'))
+                        # ── CSV ─────────────────────────────────────────────────
+                        with open(output_file, 'a') as f:
+                            def to_val(x):
+                                import torch
+                                return x.item() if isinstance(x, torch.Tensor) else x
 
-                            f.write(
-                                f'{client_id},'
-                                f'{old_task},'              # task_old
-                                f'{task},'                  # task_current
-                                f'{round_idx},'
-                                f'{acc_curr_on_curr:.6f},'
-                                f'{acc_on_old:.6f},'        # acc_curr_on_old
-                                f'{f_per_task:.6f},'        # forgetting per old_task
-                                f'{FM:.6f},'               # FM (mean across all old tasks)
-                                f'{bwt},'
-                                f'{max_past:.6f}\n'         # max_past_acc per old_task
-                            )
-                    # except Exception as e:
-                    #     logger.error(
-                    #         # f'  │  [SKIP] client={client_id} {target_layer} '
-                    #         f'task={task} round={round_idx} | {e}'
-                    #     )
+                            csv_row = [
+                                client_id, block_idx, task, round_idx,
+                                # sigma_on_curr_data, eps_on_curr_data,
+                                # sigma_on_old_data, eps_on_old_data, cos_sim.mean().item(),
+                                # to_val(linear_cka), to_val(nl_cka), to_val(kernel_cka), bwt,
+                                # acc_curr_on_curr,
+                                to_val(eps_on_curr_data), to_val(cka_on_curr_data), to_val(align_score_on_curr_data.get(10, float('nan')))
+                            ]
+                            f.write(','.join(map(str, csv_row)) + '\n')
+                # with open(output_file_v2, 'a') as f:
+                #     if task == 0:
+                #         # Task 0: chỉ có acc_curr_on_curr, không có old task nào
+                #         f.write(
+                #             f'{client_id},'
+                #             f'nan,'                         # task_old
+                #             f'{task},'                      # task_current
+                #             f'{round_idx},'
+                #             # f'{acc_curr_on_curr:.6f},'
+                #             f'nan,'                         # acc_curr_on_old
+                #             f'nan,'                         # forgetting_per_task
+                #             f'nan,'                         # FM
+                #             #f'{bwt},'
+                #             f'nan\n'                        # max_past_acc
+                #         )
+                    # else:
+                    #     for old_task in range(task):
+                    #         f_per_task   = per_task_forgetting.get(old_task, float('nan'))
+                    #         max_past     = per_task_max_acc.get(old_task, float('nan'))
+
+                    #         # acc_curr_on_old: lấy từ row hiện tại của acc_matrix
+                    #         acc_on_old = acc_matrix[-1].get(old_task, float('nan'))
+
+                    #         f.write(
+                    #             f'{client_id},'
+                    #             f'{old_task},'              # task_old
+                    #             f'{task},'                  # task_current
+                    #             f'{round_idx},'
+                    #             f'{acc_curr_on_curr:.6f},'
+                    #             f'{acc_on_old:.6f},'        # acc_curr_on_old
+                    #             f'{f_per_task:.6f},'        # forgetting per old_task
+                    #             f'{FM:.6f},'               # FM (mean across all old tasks)
+                    #             #f'{bwt},'
+                    #             f'{max_past:.6f}\n'         # max_past_acc per old_task
+                    #         )
+                    except Exception as e:
+                        logger.error(
+                            # f'  │  [SKIP] client={client_id} {target_layer} '
+                            f'task={task} round={round_idx} | {e}'
+                        )
                         # import traceback
                         # logger.debug(traceback.format_exc())   # thêm dòng này để debug dễ hơn
                         # continue
@@ -1625,25 +1615,31 @@ def measure_follow_training(args):
             if args.use_wandb:
                 step = round_global  # dùng round_global làm x-axis xuyên suốt
 
-                # ── 1. Scalar tổng quan ──────────────────────────────────────────────
+                # # ── 1. Scalar tổng quan ──────────────────────────────────────────────
                 wandb_log = {
-                    f"overview/acc_curr_task{task}":        acc_curr_on_curr * 100,
-                    f"overview/FM":                          FM * 100 if FM == FM else None,
-                    f"overview/BWT":                         bwt if bwt == bwt else None,
+                    # f"overview/acc_curr_task{task}":        acc_curr_on_curr * 100,
+                    # f"overview/FM":                          FM * 100 if FM == FM else None,
+                    # f"overview/BWT":                         bwt if bwt == bwt else None,
+                    # f"overview/round_idx":                    round_idx,
+                    f"overview/global_round":                  round_global,
+                    f"overview/eps_curr":                    eps_on_curr_data,
+                    f"overview/cka_curr":                    cka_on_curr_data,
+                    f"overview/align10_curr":              align_score_on_curr_data[10],
+                    f"overview/align20_curr":              align_score_on_curr_data[20],
                 }
 
-                # acc trên từng old task
-                for old_task in range(task):
-                    acc_on_old = acc_matrix[-1].get(old_task, float('nan'))
-                    wandb_log[f"acc_per_task/task{old_task}_acc_at_task{task}"] = acc_on_old * 100
+                # # acc trên từng old task
+                # for old_task in range(task):
+                #     acc_on_old = acc_matrix[-1].get(old_task, float('nan'))
+                #     wandb_log[f"acc_per_task/task{old_task}_acc_at_task{task}"] = acc_on_old * 100
 
-                # forgetting per task
-                for old_task, f_val in per_task_forgetting.items():
-                    wandb_log[f"forgetting_per_task/forget_task{old_task}_at_task{task}"] = f_val * 100
+                # # forgetting per task
+                # for old_task, f_val in per_task_forgetting.items():
+                #     wandb_log[f"forgetting_per_task/forget_task{old_task}_at_task{task}"] = f_val * 100
 
-                # max past acc per task (baseline để so sánh)
-                for old_task, max_val in per_task_max_acc.items():
-                    wandb_log[f"max_past_acc/task{old_task}"] = max_val * 100
+                # # max past acc per task (baseline để so sánh)
+                # for old_task, max_val in per_task_max_acc.items():
+                #     wandb_log[f"max_past_acc/task{old_task}"] = max_val * 100
 
                 wandb_log = {k: v for k, v in wandb_log.items() if v is not None}
                 wandb.log(wandb_log, step=step)
