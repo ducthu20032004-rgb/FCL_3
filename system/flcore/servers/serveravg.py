@@ -418,33 +418,34 @@ class FedAvg(Server):
                                         model_global_after, task, test_data, target_layer,
                                         self.args.seed, self.args)
 
-                                    drift_trained  = compute_eps(feat_global, feat_local)
-                                    drift_aggre    = compute_eps(feat_local,  feat_aggre)
-                                    drift_global = compute_eps(feat_global,feat_aggre)
-                                    _,cka_trained    = compute_cka(feat_global, feat_local)
-                                    _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
+                                    # drift_trained  = compute_eps(feat_global, feat_local)
+                                    # drift_aggre    = compute_eps(feat_local,  feat_aggre)
+                                    # drift_global = compute_eps(feat_global,feat_aggre)
+                                    # _,cka_trained    = compute_cka(feat_global, feat_local)
+                                    # _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
                                     _,cka_global = compute_cka(feat_global,feat_aggre)
-                                    # cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
-                                    # cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
-                                    # cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
+                                    cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
+                                    cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
+                                    cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
                                     drift_results[client.id][block_idx] = {
-                                        "drift_trained": drift_trained,
-                                        "drift_aggre":   drift_aggre,
-                                        "drift_global":drift_global,
-                                        "cka_trained":   cka_trained,
-                                        "cka_aggre":     cka_aggre,
-                                        # "cknna_global":cknna_global,
-                                        # "cknna_trained": cknna_trained,
-                                        # "cknna_aggre":   cknna_aggre,
-                                        # "cknna_global": cknna_global,
+                                        # "drift_trained": drift_trained,
+                                        # "drift_aggre":   drift_aggre,
+                                        # "drift_global":drift_global,
+                                        # "cka_trained":   cka_trained,
+                                        # "cka_aggre":     cka_aggre,
+                                        "cka_global":cka_global,
+                                        "cknna_global":cknna_global,
+                                        "cknna_trained": cknna_trained,
+                                        "cknna_aggre":   cknna_aggre,
+
                                     }
 
                                     # print per block per client
                                     print(
                                         f"[Drift] round={disp_round} task={task} client={client.id} {target_layer} | "
-                                        f"drift_trained={drift_trained:.4f} drift_aggre={drift_aggre:.4f} | drift_global = {drift_global} |"
-                                        f"cka_trained={cka_trained:.4f} cka_aggre={cka_aggre:.4f} | cka_global = {cka_global} |"
-                                        #f"cknna_trained={cknna_trained:.4f} cknna_aggre={cknna_aggre:.4f} cknna_global = {cknna_global}"
+                                        # f"drift_trained={drift_trained:.4f} drift_aggre={drift_aggre:.4f} | drift_global = {drift_global} |"
+                                        # f"cka_trained={cka_trained:.4f} cka_aggre={cka_aggre:.4f} | cka_global = {cka_global} |"
+                                        f"cknna_trained={cknna_trained:.4f} cknna_aggre={cknna_aggre:.4f} cknna_global = {cknna_global}"
                                     )
 
                                 except Exception as e:
@@ -488,10 +489,11 @@ class FedAvg(Server):
                     import csv, os
 
                     csv_path = "/kaggle/working/FCL_3/drift_results.csv"
+                    # fieldnames = ["round", "task", "client", "block",
+                    #             "drift_trained", "drift_aggre", "drift_global",
+                    #             "cka_trained", "cka_aggre", "cka_global"]
                     fieldnames = ["round", "task", "client", "block",
-                                "drift_trained", "drift_aggre", "drift_global",
-                                "cka_trained", "cka_aggre", "cka_global"]
-
+                                  "cka_global","cknna_trained","cknna_aggre","cknna_global"]
                     write_header = not os.path.exists(csv_path)
 
                     with open(csv_path, "a", newline="") as f:
@@ -509,12 +511,15 @@ class FedAvg(Server):
                                     "task":          task,
                                     "client":        cid,
                                     "block":         block_idx,
-                                    "drift_trained": round(float(r.get("drift_trained", float("nan"))), 6),
-                                    "drift_aggre":   round(float(r.get("drift_aggre",   float("nan"))), 6),
-                                    "drift_global":  round(float(r.get("drift_global",  float("nan"))), 6),
-                                    "cka_trained":   round(float(r.get("cka_trained",   float("nan"))), 6),
-                                    "cka_aggre":     round(float(r.get("cka_aggre",     float("nan"))), 6),
+                                    # "drift_trained": round(float(r.get("drift_trained", float("nan"))), 6),
+                                    # "drift_aggre":   round(float(r.get("drift_aggre",   float("nan"))), 6),
+                                    # "drift_global":  round(float(r.get("drift_global",  float("nan"))), 6),
+                                    # "cka_trained":   round(float(r.get("cka_trained",   float("nan"))), 6),
+                                    # "cka_aggre":     round(float(r.get("cka_aggre",     float("nan"))), 6),
                                     "cka_global":    round(float(r.get("cka_global",    float("nan"))), 6),
+                                    "cknna_trained": round(float(r.get("cknna_trained", float("nan"))), 6),
+                                    "cknna_aggre":   round(float(r.get("cknna_aggre",   float("nan"))), 6),
+                                    "cknna_global":  round(float(r.get("cknna_global",  float("nan"))), 6)
                                 })    
                 # ===== SAVE CHECKPOINT PER ROUND (mỗi 10 round) =====
                 if getattr(self.args, "save_checkpoint", False) and glob_iter > 0 and ((glob_iter+1) % 1 == 0):

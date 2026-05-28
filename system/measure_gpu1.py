@@ -870,7 +870,7 @@ def measure_all_representation_drift(args):
 def get_shared_probe_dataset(
     datadir='./dataset/cifar10-classes/',
     classes=list(range(10)),
-    images_per_class=100,
+    images_per_class=75,
     train_images_per_class=5000,
 ):
     x_list, y_list = [], []
@@ -885,10 +885,7 @@ def get_shared_probe_dataset(
     x = torch.tensor(np.concatenate(x_list), dtype=torch.float32)
     y = torch.tensor(np.concatenate(y_list), dtype=torch.long)
     return Transform_dataset(x, y)
-import os
-import itertools
-import torch
-import wandb
+
 
 def measure_all_drift_follow_task_client_pair(args):
     output_file = f'./outputs/client_representation_drift-{args.partition_options}-{args.backbone}.csv'
@@ -1030,7 +1027,6 @@ def measure_all_drift_follow_task_client_pair(args):
             logger.info(f'  └── Client pair ({client}, {client_prime}) done')
 
     logger.info(f'\n✅  Hoàn thành! CSV → {output_file}')
-
 
     
 def measure_follow_training(args):
