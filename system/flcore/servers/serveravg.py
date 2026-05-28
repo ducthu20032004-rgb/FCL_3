@@ -49,7 +49,7 @@ def _make_loader(dataset, batch_size: int = 256):
     # Case 1: torch.utils.data.Dataset chuan
     if isinstance(dataset, Dataset):
         return DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                          num_workers=4, pin_memory=(DEVICE.type == 'cuda'), persistent_workers=True, prefetch_factor=2)
 
     # Case 2: (X, Y) - moi phan tu la array/tensor ca batch
     # Nhan dien: co dung 2 phan tu va phan tu dau co >= 2 chieu (batch dim + feature dims)
@@ -61,7 +61,7 @@ def _make_loader(dataset, batch_size: int = 256):
         xs = torch.as_tensor(np.array(X, dtype=np.float32))
         ys = torch.as_tensor(np.array(Y)).long()
         return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
-                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                          num_workers=4, pin_memory=(DEVICE.type == 'cuda'), persistent_workers=True, prefetch_factor=2)
 
     # Case 3: list of (x_i, y_i) sample tuples
     xs, ys = [], []
@@ -71,7 +71,7 @@ def _make_loader(dataset, batch_size: int = 256):
     xs = torch.stack(xs)
     ys = torch.stack(ys)
     return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
-                      num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                      num_workers=4, pin_memory=(DEVICE.type == 'cuda'), persistent_workers=True, prefetch_factor=2)
 def compute_feature_resnet18_wrap(_model, _model_task_index, _dataset, _target_layer_index: str, seed, args):
     """
     Trích xuất features trên GPU, trả về numpy array (N, D).
