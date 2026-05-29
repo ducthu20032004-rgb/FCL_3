@@ -1650,6 +1650,237 @@ def measure_follow_training(args):
 
     logger.info(f'\n✅  Hoàn thành! CSV → {output_file}')
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper: freeze fc, fine-tune chỉ backbone trên train data task tprime,
+#         rồi đánh giá trên test data task t
+# ─────────────────────────────────────────────────────────────────────────────
+def fine_tune_backbone_frozen_head_and_eval(
+    ckpt_path: str,
+    client_id: int,
+    train_task: int,       # task dùng để train (tprime)
+    eval_task: int,        # task dùng để eval  (t)
+    class_order: np.ndarray,
+    args,
+    lr: float = 1e-3,
+    epochs: int = 10,
+    patience: int = 3,     # early stopping: dừng nếu loss không giảm sau n epoch
+) -> tuple:                # (model_finetuned, acc_after)
+    """
+    1. Load model từ ckpt_path (backbone + head gốc của task tprime).
+    2. Freeze hoàn toàn fc (head) — chỉ backbone được update.
+    3. Fine-tune backbone trên train data task tprime cho tới khi hội tụ
+       (early stopping theo train loss).
+    4. Đánh giá trên test data task t với mask_classes(task_index=eval_task).
+    Trả về (model đã fine-tune, acc_after).
+    """
+    # ── 1. Load model giữ nguyên head ────────────────────────────────────
+    model = load_model_with_head(ckpt_path, num_classes=args.classes)
+    model.to(DEVICE)
+
+    # ── 2. Freeze fc, chỉ backbone tham gia grad ─────────────────────────
+    for param in model.fc.parameters():
+        param.requires_grad = False
+
+    backbone_params = [p for n, p in model.named_parameters()
+                       if not n.startswith('fc.') and p.requires_grad]
+    logger.info(
+        f'      [freeze-head] trainable params: '
+        f'{sum(p.numel() for p in backbone_params):,} '
+        f'(fc frozen: {sum(p.numel() for p in model.fc.parameters()):,})'
+    )
+
+    # ── 3. Data ───────────────────────────────────────────────────────────
+    train_data = read_client_data_FCL_cifar10(
+        client_id, task=train_task,
+        classes_per_task=args.cpt,
+        count_labels=False, train=True,
+    )
+    test_data_eval = read_client_data_FCL_cifar10(
+        client_id, task=eval_task,
+        classes_per_task=args.cpt,
+        count_labels=False, train=False,
+    )
+    train_loader = _make_loader(train_data, batch_size=128)
+    test_loader  = _make_loader(test_data_eval, batch_size=256)
+
+    # ── 4. Optimizer (chỉ backbone params) ───────────────────────────────
+    optimizer = torch.optim.SGD(
+        backbone_params, lr=lr, momentum=0.9, weight_decay=1e-4
+    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer, T_max=epochs
+    )
+    criterion = nn.CrossEntropyLoss()
+
+    # ── 5. Fine-tune với early stopping theo train loss ───────────────────
+    best_loss   = float('inf')
+    no_improve  = 0
+
+    for epoch in range(epochs):
+        model.train()
+        running_loss = 0.0
+        for x, y in train_loader:
+            x, y = x.to(DEVICE, non_blocking=True), y.to(DEVICE, non_blocking=True)
+            optimizer.zero_grad()
+            loss = criterion(model(x), y)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+        scheduler.step()
+        avg_loss = running_loss / len(train_loader)
+
+        logger.info(
+            f'      [fine-tune backbone] epoch {epoch+1}/{epochs} '
+            f'loss={avg_loss:.4f}  best={best_loss:.4f}  no_improve={no_improve}'
+        )
+
+        # early stopping
+        if avg_loss < best_loss - 1e-4:
+            best_loss  = avg_loss
+            no_improve = 0
+        else:
+            no_improve += 1
+            if no_improve >= patience:
+                logger.info(
+                    f'      [early stop] epoch {epoch+1} — '
+                    f'loss không giảm sau {patience} epoch liên tiếp'
+                )
+                break
+
+    # ── 6. Eval trên test data task t (eval_task) ─────────────────────────
+    model.eval()
+    acc_after = test_metrics(
+        model, test_loader,
+        class_order=class_order,
+        task_index=eval_task,
+    )
+    return model, acc_after
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hàm đo chính: cross-task + retrain backbone (frozen head)
+# ─────────────────────────────────────────────────────────────────────────────
+def measure_cross_task_retrain_backbone(args):
+    """
+    Logic giống measure_all_representation_drift:
+      - Duyệt qua tất cả task-pairs (t, tprime), tất cả round_idx 0..24
+      - Với mỗi cặp:
+          * Load model_tprime tại round_idx (giữ head gốc)
+          * Đo acc_before = acc của model_tprime gốc trên test data task t
+          * Freeze head, fine-tune backbone trên train data task tprime
+            tới khi hội tụ (early stopping)
+          * Đo acc_after trên test data task t
+          * acc_gap = acc_after - acc_before
+      - Ghi CSV + wandb
+    """
+    root = '/kaggle/working' if args.kaggle else './outputs'
+    output_file = (
+        f'{root}/cross_task_retrain_backbone'
+        f'-{args.partition_options}-{args.backbone}.csv'
+    )
+
+    header = (
+        'client,t,tprime,round,'
+        'acc_before,acc_after,acc_gap\n'
+    )
+    if not os.path.isfile(output_file) or os.path.getsize(output_file) == 0:
+        with open(output_file, 'w') as f:
+            f.write(header)
+
+    task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
+
+    for client_id in range(args.num_clients):
+        logger.info('=' * 60)
+        logger.info(f'  CLIENT {client_id:>2} / {args.num_clients - 1}'
+                    f'   ({len(task_pairs)} task-pairs × 25 rounds)')
+        logger.info('=' * 60)
+        client_class_order = all_class_orders[client_id][:10]
+
+        for (t, tprime) in task_pairs:
+            logger.info(f'  ┌── Task pair (t={t}, tprime={tprime})')
+
+            # load test data task t một lần cho cả 25 round
+            test_data_t = read_client_data_FCL_cifar10(
+                client_id, task=t,
+                classes_per_task=args.cpt,
+                count_labels=False, train=False,
+            )
+            loader_t = _make_loader(test_data_t)
+
+            for round_idx in range(25):
+                ckpt_tp = get_model_path(args.saving_dir, client_id, tprime, round_idx)
+                if not os.path.isfile(ckpt_tp):
+                    logger.error(f'  │  [MISSING] {ckpt_tp}')
+                    continue
+
+                try:
+                    # ── acc_before: model_tprime gốc đánh giá trên data task t ──
+                    model_tp_orig = load_model_with_head(ckpt_tp, num_classes=args.classes)
+                    acc_before = test_metrics(
+                        model_tp_orig, loader_t,
+                        class_order=client_class_order,
+                        task_index=t,
+                    )
+                    del model_tp_orig   # giải phóng VRAM trước khi fine-tune
+                    torch.cuda.empty_cache()
+
+                    logger.info(
+                        f'  │  round={round_idx:>2} | '
+                        f'acc_before(task {t}) = {acc_before*100:.2f}%'
+                    )
+
+                    # ── fine-tune backbone (freeze head), eval trên task t ──────
+                    _, acc_after = fine_tune_backbone_frozen_head_and_eval(
+                        ckpt_path=ckpt_tp,
+                        client_id=client_id,
+                        train_task=tprime,
+                        eval_task=t,
+                        class_order=client_class_order,
+                        args=args,
+                        lr=1e-3,
+                        epochs=10,
+                        patience=3,
+                    )
+
+                    acc_gap = acc_after - acc_before
+                    logger.info(
+                        f'  │  round={round_idx:>2} | '
+                        f'acc_after={acc_after*100:.2f}%  '
+                        f'gap={acc_gap*100:+.2f}%  '
+                        f'({"↑ recover" if acc_gap > 0 else "↓ worse"})'
+                    )
+
+                    # ── CSV ────────────────────────────────────────────────────
+                    line = (
+                        f'{client_id},{t},{tprime},{round_idx},'
+                        f'{acc_before:.6f},{acc_after:.6f},{acc_gap:.6f}\n'
+                    )
+                    with open(output_file, 'a') as f:
+                        f.write(line)
+
+                    # ── wandb ──────────────────────────────────────────────────
+                    if args.use_wandb:
+                        prefix = f'retrain/pair_{t}_{tprime}'
+                        wandb.log({
+                            'round':                    round_idx,
+                            'client':                   client_id,
+                            f'{prefix}/acc_before':     acc_before * 100,
+                            f'{prefix}/acc_after':      acc_after  * 100,
+                            f'{prefix}/acc_gap':        acc_gap    * 100,
+                        })
+
+                except Exception as e:
+                    logger.error(
+                        f'  │  [SKIP] client={client_id} pair=({t},{tprime}) '
+                        f'round={round_idx} | {e}'
+                    )
+                    continue
+
+            logger.info(f'  └── pair (t={t}, tprime={tprime}) done')
+
+    logger.info(f'\n✅  Hoàn thành! CSV → {output_file}')
 # ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1688,6 +1919,8 @@ def main(args):
             measure_all_drift_follow_task_client_pair(args)
         elif args.method == 'cross_task':
             measure_all_representation_drift(args)
+        elif args.method == 'retrain_backbone_cross_task':
+            measure_cross_task_retrain_backbone(args)
     else:
         raise ValueError(f'Backbone chưa hỗ trợ: {args.backbone}')
 
@@ -1709,5 +1942,8 @@ if __name__ == '__main__':
     parser.add_argument('--use_wandb',         type=bool, default=False)
     parser.add_argument('--method',             type=str,  default='dynamic')
     parser.add_argument('--kaggle',             type=bool, default=False)
+    parser.add_argument('--retrain_epochs',  type=int,   default=10)
+    parser.add_argument('--retrain_lr',      type=float, default=1e-3)
+    parser.add_argument('--retrain_patience',type=int,   default=3)
     args = parser.parse_args()
     main(args)

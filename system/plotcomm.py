@@ -15,12 +15,13 @@ import numpy as np
 # ═══════════════════════════════════════════════════════════════════════
 
 # --- Đường dẫn file đầu vào ------------------------------------------
-CSV_PATH = "c:\Thu\Paper\drift_results.csv"
+CSV_PATH = "C:\Thu\FCL\drift_results.csv"
 
 # --- Chọn nhóm metric muốn vẽ (chọn 1 trong 2 nhóm) -----------------
 #   "drift"  → drift_trained, drift_aggre, drift_global
 #   "cka"    → cka_trained,   cka_aggre,   cka_global
-METRIC_GROUP = "cka"          # "drift" hoặc "cka"
+#   "cknna"  → cknna_trained, cknna_aggre, cknna_global
+METRIC_GROUP = "cknna"          # "drift", "cka" hoặc "cknna"
 
 # --- Chọn đường nào được hiển thị (True = vẽ, False = ẩn) -----------
 SHOW_TRAINED = True
@@ -38,6 +39,7 @@ TITLE    = r"Feature Drift Across Continual Federated Learning Rounds"
 XLABEL   = "Communication Round"
 YLABEL_DRIFT = r"Drift $\mathcal{D}$"
 YLABEL_CKA   = r"CKA Similarity"
+YLABEL_CKRNA = r"CKNNA Similarity"
 
 # --- Nhãn task trên trục X ------------------------------------------
 #   Mỗi phần tử: (round_bắt_đầu_task, "Tên task")
@@ -81,7 +83,8 @@ def load_and_average(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
     cols = ["round", "task",
             "drift_trained", "drift_aggre", "drift_global",
-            "cka_trained",   "cka_aggre",   "cka_global"]
+            "cka_trained",   "cka_aggre",   "cka_global",
+            "cknna_trained","cknna_aggre", "cknna_global"]
     df = df[cols]
     avg = df.groupby(["round", "task"]).mean().reset_index()
     avg = avg.sort_values("round").reset_index(drop=True)
@@ -106,8 +109,10 @@ def pick_columns(group: str):
         return ("drift_trained", "drift_aggre", "drift_global")
     elif group == "cka":
         return ("cka_trained", "cka_aggre", "cka_global")
+    elif group == "cknna":
+        return ("cknna_trained", "cknna_aggre", "cknna_global")
     else:
-        raise ValueError(f"METRIC_GROUP phải là 'drift' hoặc 'cka', nhận được: '{group}'")
+        raise ValueError(f"METRIC_GROUP phải là 'drift' hoặc 'cka' hoặc 'cknna', nhận được: '{group}'")
 
 
 def main():
@@ -115,7 +120,7 @@ def main():
     avg = load_and_average(CSV_PATH)
 
     col_trained, col_aggre, col_global = pick_columns(METRIC_GROUP)
-    ylabel = YLABEL_DRIFT if METRIC_GROUP == "drift" else YLABEL_CKA
+    ylabel = YLABEL_DRIFT if METRIC_GROUP == "drift" else YLABEL_CKA if METRIC_GROUP == "cka" else YLABEL_CKRNA
 
     rounds = avg["round"].values
 
