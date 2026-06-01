@@ -322,7 +322,7 @@ class FedAS(Server):
                         pass   
                     if client.id in [0, 1,2,3,4]:  
                         try:
-                            save_dir =  "/kaggle/working/FCL_3/weight_fedas/weight_client_round"  # Thay đổi đường dẫn theo nhu cầu
+                            save_dir =  "/kaggle/working/FCL_3/weight_fedas/weight_client_round/"  # Thay đổi đường dẫn theo nhu cầu
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}client_{client.id}_task_{task}_round_{i}.pt"
                             
