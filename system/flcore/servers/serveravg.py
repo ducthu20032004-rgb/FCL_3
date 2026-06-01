@@ -383,8 +383,6 @@ class FedAvg(Server):
                     self.aggregate()
                 model_global_after = copy.deepcopy(self.global_model)
 
-                # === Đo drift + cknna === 
-                # === Đo drift + cka + cknna ===
                 if getattr(self.args, "measure_drift", True):
                     print("Drift thanh cong")
                     try:
@@ -418,22 +416,22 @@ class FedAvg(Server):
                                         model_global_after, task, test_data, target_layer,
                                         self.args.seed, self.args)
 
-                                    # drift_trained  = compute_eps(feat_global, feat_local)
-                                    # drift_aggre    = compute_eps(feat_local,  feat_aggre)
-                                    # drift_global = compute_eps(feat_global,feat_aggre)
+                                    drift_trained  = compute_eps(feat_global, feat_local)
+                                    drift_aggre    = compute_eps(feat_local,  feat_aggre)
+                                    drift_global = compute_eps(feat_global,feat_aggre)
                                     # _,cka_trained    = compute_cka(feat_global, feat_local)
                                     # _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
-                                    _,cka_global = compute_cka(feat_global,feat_aggre)
+                                    #_,cka_global = compute_cka(feat_global,feat_aggre)
                                     cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
                                     cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
                                     cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
                                     drift_results[client.id][block_idx] = {
-                                        # "drift_trained": drift_trained,
-                                        # "drift_aggre":   drift_aggre,
-                                        # "drift_global":drift_global,
+                                        "drift_trained": drift_trained,
+                                        "drift_aggre":   drift_aggre,
+                                        "drift_global":drift_global,
                                         # "cka_trained":   cka_trained,
                                         # "cka_aggre":     cka_aggre,
-                                        "cka_global":cka_global,
+                                        #"cka_global":cka_global,
                                         "cknna_global":cknna_global,
                                         "cknna_trained": cknna_trained,
                                         "cknna_aggre":   cknna_aggre,
