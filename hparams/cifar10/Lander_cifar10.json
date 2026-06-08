@@ -9,15 +9,15 @@
     "device_id": "0",
     "prev": 0,
     "times": 1,
-    "dataset": "CIFAR100",
-    "num_classes": 100,
+    "dataset": "CIFAR10",
+    "num_classes": 10,
     "model": "ResNet18",
 
     "batch_size": 64,
     "local_learning_rate": 0.01,
     "learning_rate_decay": false,
 
-    "global_rounds": 200,
+    "global_rounds": 25,
     "local_epochs": 1,
 
     "algorithm": "LANDER",
@@ -30,7 +30,7 @@
     "random_join_ratio": false,
     "eval_gap": 1,
     "out_folder": "out",
-    "note": "cifar100_t5_niid05",
+    "note": "cifar10_t5_niid05",
 
     "non_iid": "dirichlet",
     "alpha": 0.5,

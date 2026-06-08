@@ -16,7 +16,7 @@ from system.utilities_probe.utils import gpu_information_summary, set_seed
 from system.task_data_loader.scenarios import TaskConfig, SimpleScenario
 import wandb
 from torch.utils.data import Dataset
-from system.utils.data_utils_mine import read_client_data_FCL_cifar10
+from system.utils.data_utils import read_client_data_FCL_cifar10
 
 logger = logging.getLogger(__name__)
 BLOCK_NAMES = ["block0", "block1", "block2", "block3", "block4"]
@@ -140,7 +140,7 @@ def probe_single_task(
         num_workers=args.num_workers,
         batch_size=args.batch_size,
         logging_step=4000,
-        early_stopping_config=early_stop_cfg,
+        early_stopping_config=None,
         is_probe=True,
         save_progress=False,
         saving_dir=args.saving_dir,
@@ -179,27 +179,27 @@ def measure_probe_forgetting(args):
             f"client_{client_id}_task_{task_id}_round_{round_idx}.pt"
         )
 
-    #task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
-    task_pairs = [(1,4),(2,3),(2,4),(3,4)]
+    task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
+
     CACHE_DIR = args.dir_probe_cache
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     csv_rows = []
 
-    for client_id in range(args.num_clients):
+    for client_id in [0,1,2,3,4]:
         logger.info("=" * 65)
         logger.info(f"  CLIENT {client_id}")
         logger.info("=" * 65)
 
-        if args.use_wandb:
-            wandb.init(
-                project="Representation Drift Measurement",
-                entity="ducthu2003",
-                name=f"client{client_id}_linear_probe",
-                group=f"linear_probe_client{client_id}",
-                config={"client_id": client_id, "epochs": args.epochs},
-                reinit=True,
-            )
+        # if args.use_wandb:
+        #     wandb.init(
+        #         project="Representation Drift Measurement",
+        #         entity="ducthu2003",
+        #         name=f"client{client_id}_linear_probe",
+        #         group=f"linear_probe_client{client_id}",
+        #         config={"client_id": client_id, "epochs": args.epochs},
+        #         reinit=True,
+        #     )
 
         # ── BASELINE ─────────────────────────────────────────────────────────
         # Probe task t trên model_t_round{num_rounds}
@@ -255,7 +255,7 @@ def measure_probe_forgetting(args):
 
             logger.info(f"  Pair t={t} → tprime={tprime}")
             total_forgetting = 0.0  # Trung bình trên tất cả block
-            for round_idx in range(25):
+            for round_idx in [24]:
                 path = ckpt_path(client_id, tprime, round_idx)
                 if not os.path.isfile(path):
                     logger.warning(f"  [MISSING] {path}")
@@ -306,15 +306,15 @@ def measure_probe_forgetting(args):
 
                     if args.use_wandb:
                         wandb.log({
-                            f"{block_name}/forgetting/pair{t}_{tprime}": forgetting,
-                            f"{block_name}/acc_tprime/pair{t}_{tprime}": acc_after,
-                            f"{block_name}/baseline/pair{t}_{tprime}":   baseline,
-                            f"{block_name}/total_forgetting/pair{t}_{tprime}": total_forgetting,
+                            f"client{client_id}/{block_name}/forgetting/pair{t}_{tprime}": forgetting,
+                            f"client{client_id}/{block_name}/acc_tprime/pair{t}_{tprime}": acc_after,
+                            f"client{client_id}/{block_name}/baseline/pair{t}_{tprime}":   baseline,
+                            f"client{client_id}/{block_name}/total_forgetting/pair{t}_{tprime}": total_forgetting,
                             "round": round_idx,
                         })
 
-        if args.use_wandb:
-            wandb.finish()
+        # if args.use_wandb:
+        #     wandb.finish()
 
     return csv_rows
 
@@ -327,18 +327,27 @@ def main(args):
     n_gpu, device = gpu_information_summary()
     set_seed(args.seed_value, n_gpu=n_gpu)
     args.device = device
-
+    if args.use_wandb:
+        wandb.init(
+            project=f"linear_probe_{args.method}",   # ← tên project theo method
+            entity="ducthu2003",
+            name=f"linear_probe_{args.method}",
+            config=vars(args),
+        )
     rows = measure_probe_forgetting(args)
-
+    if args.use_wandb:
+        wandb.finish()
     import csv
     out_path = os.path.join(args.saving_dir, "probe_forgetting_results.csv")
     if rows:
+        os.makedirs(args.saving_dir, exist_ok=True)  # ← thêm dòng này
         with open(out_path, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=rows[0].keys())
             writer.writeheader()
             writer.writerows(rows)
         logger.info(f"Saved → {out_path}")
-
+    else:
+        logger.error("csv_rows rỗng!")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -347,14 +356,15 @@ if __name__ == "__main__":
     parser.add_argument("--num_clients",     type=int, default=1)
     parser.add_argument("--num_tasks",       type=int, default=5)
     parser.add_argument("--num_rounds",      type=int, default=25)
-    parser.add_argument("--epochs",          type=int, default=200)
+    parser.add_argument("--epochs",          type=int, default=100)
     parser.add_argument("--batch_size",      type=int, default=128)
     parser.add_argument("--num_workers",     type=int, default=0)
     parser.add_argument("--lr",             type=float, default=0.001)
     parser.add_argument("--seed_value",      type=int, default=42)
     parser.add_argument("--use_wandb",       action="store_true")
-    parser.add_argument("--dir_probe_cache", type=str, default="./probe_cache4")
+    parser.add_argument("--dir_probe_cache", type=str, default='./probe_fedala')
     parser.add_argument("--patience",        type=int, default=20)
+    parser.add_argument("--method",          type=str, default="FedDDE", help="Tên method để ghi vào WandB và tên experiment")
     args = parser.parse_args()
 
     logging.basicConfig(

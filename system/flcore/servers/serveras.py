@@ -30,7 +30,7 @@ from system.utils.data_utils import read_client_data_FCL_cifar10
 from system.flcore.clients.clientas import clientAS
 from system.flcore.servers.serverbase import Server
 from system.flcore.metrics.average_forgetting import metric_average_forgetting
-
+import wandb
 # Pretty logger (safe if not installed)
 try:
     from system.utils.rich_progress import RichRoundLogger
@@ -237,6 +237,8 @@ class FedAS(Server):
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         elif self.args.dataset == 'CIFAR100':
                             train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
+                        elif self.args.dataset == 'CIFAR10':
+                            train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         else:
                             raise NotImplementedError("Not supported dataset")
                     # elif self.args.partition_options == 'hetero':
@@ -322,7 +324,7 @@ class FedAS(Server):
                         pass   
                     if client.id in [0, 1,2,3,4]:  
                         try:
-                            save_dir =  "/kaggle/working/FCL_3/weight_fedas/weight_client_round/"  # Thay đổi đường dẫn theo nhu cầu
+                            save_dir =  "/home/ghostm211/Thu/FCL_3/weight_fedas/weight_client_round/"  # Thay đổi đường dẫn theo nhu cầu
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}client_{client.id}_task_{task}_round_{i}.pt"
                             
@@ -481,7 +483,7 @@ class FedAS(Server):
                         import traceback; traceback.print_exc()   
 
 
-                    csv_path = "/kaggle/working/FCL_3/weight_fedas/fedas_drift_results.csv"
+                    csv_path = "/home/ghostm211/Thu/FCL_3/weight_fedas/fedas_drift_results.csv"
                     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
                     fieldnames = ["round", "task", "client", "block",
                                 "drift_trained", "drift_aggre", "drift_global",

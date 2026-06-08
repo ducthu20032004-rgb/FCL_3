@@ -11,13 +11,14 @@ while preserving FedALA's original training algorithm (local init + ALA train).
 Paste over your existing FedALA in: system/flcore/servers/serverala.py
 """
 
-import os
+
 import time
 import copy
 import inspect
 
 from typing import Any, Dict, List, Optional
-
+# === Ghi CSV (thay thế / bổ sung wandb) ===
+import csv, os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -25,7 +26,7 @@ import wandb
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from system.utils.data_utils import read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k, read_client_data_FCL_cifar10
-from system.measure_gpu1 import get_resnet18_blocks,DEVICE,compute_eps, compute_cka, compute_alignment_from_arrays
+from system.measure_gpu1 import get_resnet18_blocks,DEVICE,compute_eps, compute_alignment_from_arrays
 from system.flcore.clients.clientala import clientALA
 
 from system.flcore.servers.serverbase import Server
@@ -218,22 +219,22 @@ class FedALA(Server):
                             train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         else:
                             raise NotImplementedError("Not supported dataset")
-                    elif self.args.partition_options == 'hetero':
-                        from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
-                        if self.args.dataset == 'IMAGENET1k':
-                            train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                    seed = self.args.seed, alpha = self.args.alpha,
-                                                                                    total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        elif self.args.dataset == 'CIFAR100':
-                            train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                seed = self.args.seed, alpha = self.args.alpha,
-                                                                                total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        elif self.args.dataset == 'CIFAR10':
-                            train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                seed = self.args.seed, alpha = self.args.alpha,
-                                                                                total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        else:
-                            raise NotImplementedError("Not supported dataset")
+                    # elif self.args.partition_options == 'hetero':
+                    #     from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                    #     if self.args.dataset == 'IMAGENET1k':
+                    #         train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                                 seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                                 total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     elif self.args.dataset == 'CIFAR100':
+                    #         train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                             seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                             total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     elif self.args.dataset == 'CIFAR10':
+                    #         train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                             seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                             total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     else:
+                    #         raise NotImplementedError("Not supported dataset")
 
                     # Update client for the new task
                     self.clients[i].next_task(train_data, label_info)
@@ -315,8 +316,9 @@ class FedALA(Server):
                                 save_dir,
                                 f"client_{cid}_task_{task}_round_{i}.pt"
                             )
-                            torch.save(client.model.state_dict(), save_path)
-                            print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
+                            if client.id not in [5, 6, 7, 8, 9]:   # ← guard without continue
+                                torch.save(client.model.state_dict(), save_path)
+                                print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
                         except Exception as save_err:
                             print(f"[CKPT ERROR] client={cid} task={task} round={i}: {save_err}")
                         # ──────────────────────────────────────────────────────────
@@ -494,8 +496,7 @@ class FedALA(Server):
                         print(f"[Drift measure] warning: {e}")
 
                         import traceback; traceback.print_exc()   
-                    # === Ghi CSV (thay thế / bổ sung wandb) ===
-                    import csv, os
+
 
                     csv_path = "/home/ghostm211/Thu/FCL_3/ALA/drift_results.csv"
                     # fieldnames = ["round", "task", "client", "block",

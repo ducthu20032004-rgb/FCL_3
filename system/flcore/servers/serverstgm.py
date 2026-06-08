@@ -11,7 +11,7 @@ from torch.optim.lr_scheduler import StepLR
 import numpy as np
 
 import statistics
-
+import os
 
 class FedSTGM(Server):
     def __init__(self, args, times):
@@ -109,7 +109,15 @@ class FedSTGM(Server):
 
                 for client in self.selected_clients:
                     client.train(task=task)
-
+                    if i in [24]:  # Lưu model của client 0 sau round đầu tiên của task đầu tiên
+                        try:
+                            save_dir =  "/home/ghostm211/Thu/FCL_3/weight_fedSTGM/weight_client_round"  # Thay đổi đường dẫn theo nhu cầu
+                            os.makedirs(save_dir, exist_ok=True)
+                            save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
+                            torch.save(client.model.state_dict(), save_path)
+                            print(f"Saved model for client {client.id} at round {i} of task {task}")
+                        except Exception as e:
+                            print(f"Error occurred while saving model for client {client.id}: {e}")
                 # threads = [Thread(target=client.train)
                 #            for client in self.selected_clients]
                 # [t.start() for t in threads]

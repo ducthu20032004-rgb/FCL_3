@@ -126,7 +126,79 @@
 #          "Cross-Client Representation Similarity · CKNNA×100 (by block)",
 #          r"C:\Thu\FCL\outputs\final3_cknna_by_task.png")
 # print("Done!")
+from torch.utils.data import DataLoader
+from system.measure_gpu1 import *
+import os
+def get_model_path(saving_dir: str, client_id: int, task: int, round: int) -> str:
+    return os.path.join(saving_dir, f'client_{client_id}_task_{task}_round_{round}.pt')
+path_model = get_model_path("/home/ghostm211/Thu/FCL_3/weight_fedweit/weight_client_round", 0, 0, 0)
+test_data_t      = read_client_data_FCL_cifar10(
+                    0, task=0,      classes_per_task=2,
+                    count_labels=False, train=False)
+def _make_loader(dataset, batch_size: int = 256):
+    """
+    Tao DataLoader an toan, xu ly moi kieu tra ve cua read_client_data_FCL_cifar10:
 
-import numpy as np
-arr = np.load("dataset/cifar10-classes/0.npy")
-print(arr.shape)  # (N, H, W, 3)
+      Case 1 - torch.utils.data.Dataset chuan  -> dung truc tiep
+      Case 2 - tuple/list 2 phan tu (X, Y) voi X,Y la array/tensor (N,...) -> TensorDataset
+      Case 3 - list of (x_i, y_i) sample tuples -> stack roi TensorDataset
+    num_workers=0 de tranh loi pickle / seek khi data da duoc load san vao RAM.
+    """
+    from torch.utils.data import TensorDataset, Dataset
+
+    # Case 1: torch.utils.data.Dataset chuan
+    if isinstance(dataset, Dataset):
+        return DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+
+    # Case 2: (X, Y) - moi phan tu la array/tensor ca batch
+    # Nhan dien: co dung 2 phan tu va phan tu dau co >= 2 chieu (batch dim + feature dims)
+    if (isinstance(dataset, (tuple, list))
+            and len(dataset) == 2
+            and hasattr(dataset[0], 'shape')
+            and len(np.shape(dataset[0])) >= 2):
+        X, Y = dataset
+        xs = torch.as_tensor(np.array(X, dtype=np.float32))
+        ys = torch.as_tensor(np.array(Y)).long()
+        return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
+                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+
+    # Case 3: list of (x_i, y_i) sample tuples
+    xs, ys = [], []
+    for x, y in dataset:
+        xs.append(torch.as_tensor(np.array(x, dtype=np.float32)))
+        ys.append(torch.as_tensor(np.array(y)).long())
+    xs = torch.stack(xs)
+    ys = torch.stack(ys)
+    return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
+                      num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+
+
+
+loader_t = _make_loader(test_data_t, batch_size=128)
+model = load_resnet18_from_checkpoint(path_model, load_head=False)
+feat_t = compute_feature_resnet18(path_model,loader_t,0,seed =42 ,args=args)
+print(path_model)
+print(feat_t.shape)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Representation Drift Measurement')
+
+    parser.add_argument('--saving_dir',        type=str,  default=r'D:\FCL\checkpoints_client_task')
+    parser.add_argument('--cp_probe',          type=str,  default=r'C:\Thu\FCL\probes_torchvision')
+    parser.add_argument('--partition_options', type=str,  default='hetero')
+    parser.add_argument('--backbone',          type=str,  default='ResNet18')
+    parser.add_argument('--num_clients',       type=int,  default=10)
+    parser.add_argument('--num_tasks',         type=int,  default=5)
+    parser.add_argument('--cpt',               type=int,  default=2)
+    parser.add_argument('--seed',              type=int,  default=42)
+    parser.add_argument('--classes',           type=int,  default=10)
+    parser.add_argument('--use_wandb',         type=bool, default=False)
+    parser.add_argument('--method',             type=str,  default='dynamic')
+    parser.add_argument('--kaggle',             type=bool, default=False)
+    parser.add_argument('--retrain_epochs',  type=int,   default=10)
+    parser.add_argument('--retrain_lr',      type=float, default=1e-3)
+    parser.add_argument('--retrain_patience',type=int,   default=3)
+    parser.add_argument('--model',             type=str,  default='ALA')
+    args = parser.parse_args()
+    main(args)
