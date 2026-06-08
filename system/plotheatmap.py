@@ -99,7 +99,45 @@ def build_matrix(agg: pd.DataFrame, n_tasks: int):
 def round_label_str(r) -> str:
     return "all rounds (mean)" if r == "all" else f"round {r}"
 
+# ─────────────────────────────────────────────
+# NEW: Tính mean theo block
+# ─────────────────────────────────────────────
+def compute_block_means(mat: np.ndarray, n_tasks: int, block_size: int = 2):
+    """
+    Tính mean theo các block:
+    - All pairs
+    - Diagonal (same task)
+    - Off-diagonal (forgetting / interference)
+    - Early tasks, Late tasks, Cross blocks
+    """
+    n = n_tasks - 1
+    results = {}
 
+    valid = ~np.isnan(mat)
+    results["Overall"] = float(np.mean(mat[valid]))
+
+    # Diagonal
+    diag = np.diag(mat)
+    results["Diagonal (same task)"] = float(np.nanmean(diag))
+
+    # Off-diagonal
+    off_diag = mat.copy()
+    np.fill_diagonal(off_diag, np.nan)
+    results["Off-diagonal"] = float(np.nanmean(off_diag))
+
+    # Block theo group of tasks
+    if block_size > 1:
+        for start in range(0, n, block_size):
+            end = min(start + block_size, n)
+            block = mat[start:end, start:end]
+            results[f"Block {start}-{end-1}"] = float(np.nanmean(block))
+
+            # Cross block
+            if start + block_size < n:
+                cross = mat[start:end, end:]
+                results[f"Cross {start}-{end-1} → later"] = float(np.nanmean(cross))
+
+    return results
 def plot_multi(matrices, titles, round_sels, n_tasks, y_label,
                ncols=None, global_colorscale=False, suptitle=None, cmap_colors=None):
     """
@@ -161,9 +199,11 @@ def plot_multi(matrices, titles, round_sels, n_tasks, y_label,
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.06)
         cb = fig.colorbar(im, cax=cax)
-        cb.ax.tick_params(labelsize=8)
-        if idx == n_plots - 1:
-            cb.set_label(y_label, fontsize=9)
+        cb.ax.tick_params(labelsize=16)
+        # if idx == 0:
+        #     cb.set_label("Forgetting",fontsize=20)
+        # elif idx == n_plots - 1:
+        #     cb.set_label(y_label, fontsize=20)
 
         # Cell annotations
         for rr in range(n):
@@ -172,22 +212,22 @@ def plot_multi(matrices, titles, round_sels, n_tasks, y_label,
                 if not np.isnan(v):
                     bright = (v - vmin) / (vmax - vmin + 1e-9)
                     tc = "white" if bright < 0.35 or bright > 0.75 else "#222222"
-                    ax.text(cc, rr, f"{v:.2f}",
+                    ax.text(cc, rr, f"{v:.3f}",
                             ha="center", va="center",
-                            fontsize=8, color=tc, fontweight="bold")
+                            fontsize=20, color=tc, fontweight="bold")
 
         # X-axis ticks — sequential training timeline
         ax.set_xticks(range(n))
-        ax.set_xticklabels(col_labels, fontsize=9)
+        ax.set_xticklabels(col_labels, fontsize=20)
         ax.xaxis.set_ticks_position("bottom")
-        ax.set_xlabel("Seq. Training →", fontsize=10, labelpad=6)
+        ax.set_xlabel("Sequence Training →", fontsize=20, labelpad=6)
 
         # Y-axis ticks — eval task
         ax.set_yticks(range(n))
         if idx % ncols == 0:
             # Chỉ subplot cột đầu mới hiện ytick labels
-            ax.set_yticklabels(row_labels, fontsize=9)
-            ax.set_ylabel("Eval Task", fontsize=10, labelpad=6)
+            ax.set_yticklabels(row_labels, fontsize=20)
+            ax.set_ylabel("Eval Task", fontsize=25, labelpad=6)
         else:
             ax.set_yticklabels([])
 
@@ -199,7 +239,7 @@ def plot_multi(matrices, titles, round_sels, n_tasks, y_label,
 
         # Title + round label
         rstr = round_label_str(rsel)
-        ax.set_title(f"{title}\n[{rstr}]", fontsize=12, fontweight="bold", pad=10)
+        ax.set_title(f"{title}\n", fontsize=20, fontweight="bold", pad=10)
 
     # Ẩn axes thừa
     for idx in range(n_plots, nrows * ncols):
@@ -208,7 +248,7 @@ def plot_multi(matrices, titles, round_sels, n_tasks, y_label,
     fig.subplots_adjust(wspace=0.35, hspace=0.55)
 
     if suptitle:
-        fig.suptitle(suptitle, fontsize=15, fontweight="bold", y=1.01)
+        fig.suptitle(suptitle, fontsize=20, fontweight="bold", y=1.01)
 
     plt.tight_layout()
     plt.show()
@@ -236,7 +276,7 @@ def main():
                    help="Subplot titles (defaults to filename stems)")
     p.add_argument("--ntasks",  type=int, default=5,
                    help="Total number of tasks (default: 5)")
-    p.add_argument("--y",       type=str, default="CKA",
+    p.add_argument("--y",       type=str, default="Magnitude",
                    help="Colorbar label")
     p.add_argument("--ncols",   type=int, default=None,
                    help="Subplot columns (default: all in one row)")
@@ -269,7 +309,7 @@ def main():
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"[+] Files  : {args.files}")
     print(f"[+] Rounds : {round_sels}")
-    print(f"[+] Titles : {titles}")
+    #print(f"[+] Titles : {titles}")
     print(f"[+] Tasks  : {args.ntasks}")
 
     # ── Load data ─────────────────────────────────────────────────────────────
@@ -278,14 +318,24 @@ def main():
         print(f"\n── {t} | file: {f} | round: {rsel} ──")
         agg = load(f, rsel)
         mat = build_matrix(agg, args.ntasks)
+        
+        # In matrix
         df_show = pd.DataFrame(
             np.round(mat, 3),
-            index  =[f"T{i}"        for i in range(args.ntasks - 1)],
-            columns=[f"After T{j+1}" for j in range(args.ntasks - 1)],
+            index=[f"T{i}" for i in range(args.ntasks-1)],
+            columns=[f"After T{j+1}" for j in range(args.ntasks-1)],
         )
+        print("Matrix:")
         print(df_show.to_string())
+        
+        # === TÍNH BLOCK MEANS ===
+        block_means = compute_block_means(mat, args.ntasks, 5)
+        print("\nBlock Means:")
+        for k, v in block_means.items():
+            print(f"  {k:30s}: {v:.4f}")
+        
         matrices.append(mat)
-
+    
     # ── Plot ──────────────────────────────────────────────────────────────────
     plot_multi(
         matrices=matrices,

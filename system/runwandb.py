@@ -1,80 +1,80 @@
-# import wandb
-# import pandas as pd
-# import argparse
-# import os
+# # import wandb
+# # import pandas as pd
+# # import argparse
+# # import os
 
-# def runwandb(entity, project, run_id, method, block, out_dir):
-#     api = wandb.Api()
-#     run = api.run(f"{entity}/{project}/runs/{run_id}")
+# # def runwandb(entity, project, run_id, method, block, out_dir):
+# #     api = wandb.Api()
+# #     run = api.run(f"{entity}/{project}/runs/{run_id}")
 
-#     rows = list(run.scan_history(page_size=10000))  # fix thiếu data
-#     df = pd.DataFrame(rows)
+# #     rows = list(run.scan_history(page_size=10000))  # fix thiếu data
+# #     df = pd.DataFrame(rows)
     
-#     print(f"  Raw rows từ W&B: {len(df)}")
+# #     print(f"  Raw rows từ W&B: {len(df)}")
 
-#     overlap_cols = [
-#         f"{block}/task0/{method}",
-#         f"{block}/task1/{method}",
-#         f"{block}/task2/{method}",
-#         f"{block}/task3/{method}",
-#         f"{block}/task4/{method}",
-#     ]
+# #     overlap_cols = [
+# #         f"{block}/task0/{method}",
+# #         f"{block}/task1/{method}",
+# #         f"{block}/task2/{method}",
+# #         f"{block}/task3/{method}",
+# #         f"{block}/task4/{method}",
+# #     ]
 
-#     cols_exist = [c for c in overlap_cols if c in df.columns]
+# #     cols_exist = [c for c in overlap_cols if c in df.columns]
 
-#     if not cols_exist:
-#         print(f"[ERROR] Không tìm thấy cột nào cho {block}/{method}")
-#         return None
+# #     if not cols_exist:
+# #         print(f"[ERROR] Không tìm thấy cột nào cho {block}/{method}")
+# #         return None
 
-#     # Melt về format cũ: round_global + block4/{method}
-#     df_sub = df[["round_global"] + cols_exist].copy()
-#     df_melt = df_sub.melt(id_vars="round_global", value_vars=cols_exist,
-#                           var_name="task", value_name=f"block4/{method}")
+# #     # Melt về format cũ: round_global + block4/{method}
+# #     df_sub = df[["round_global"] + cols_exist].copy()
+# #     df_melt = df_sub.melt(id_vars="round_global", value_vars=cols_exist,
+# #                           var_name="task", value_name=f"block4/{method}")
 
-#     df_melt = df_melt.dropna(subset=[f"block4/{method}"])
-#     df_melt = df_melt.sort_values("round_global").reset_index(drop=True)
+# #     df_melt = df_melt.dropna(subset=[f"block4/{method}"])
+# #     df_melt = df_melt.sort_values("round_global").reset_index(drop=True)
 
-#     df_final = df_melt[["round_global", f"block4/{method}"]]
+# #     df_final = df_melt[["round_global", f"block4/{method}"]]
 
-#     return df_final
+# #     return df_final
 
 
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--entity",  default="ducthu2003")
-#     parser.add_argument("--project", default="Representation Drift Measurement")
-#     parser.add_argument("--run_id",  default="jcabxqbj")
-#     parser.add_argument("--method",  default="forgetting")
-#     parser.add_argument("--block",   default="block4")
-#     parser.add_argument("--out_dir", default=r"C:\Thu\FCL\material_experiment\dynamic")
-#     args = parser.parse_args()
+# # if __name__ == "__main__":
+# #     parser = argparse.ArgumentParser()
+# #     parser.add_argument("--entity",  default="ducthu2003")
+# #     parser.add_argument("--project", default="Representation Drift Measurement")
+# #     parser.add_argument("--run_id",  default="jcabxqbj")
+# #     parser.add_argument("--method",  default="forgetting")
+# #     parser.add_argument("--block",   default="block4")
+# #     parser.add_argument("--out_dir", default=r"C:\Thu\FCL\material_experiment\dynamic")
+# #     args = parser.parse_args()
 
-#     print(f"\n{'='*60}")
-#     print(f"Entity: {args.entity} | Project: {args.project}")
-#     print(f"Run ID: {args.run_id} | Method: {args.method} | Block: {args.block}")
-#     print(f"{'='*60}\n")
+# #     print(f"\n{'='*60}")
+# #     print(f"Entity: {args.entity} | Project: {args.project}")
+# #     print(f"Run ID: {args.run_id} | Method: {args.method} | Block: {args.block}")
+# #     print(f"{'='*60}\n")
 
-#     df = runwandb(args.entity, args.project, args.run_id, args.method, args.block, args.out_dir)
+# #     df = runwandb(args.entity, args.project, args.run_id, args.method, args.block, args.out_dir)
 
-#     if df is None:
-#         print("[ERROR] Download thất bại")
-#         exit(1)
+# #     if df is None:
+# #         print("[ERROR] Download thất bại")
+# #         exit(1)
 
-#     print(df)
-#     print(f"\nShape: {df.shape}")
+# #     print(df)
+# #     print(f"\nShape: {df.shape}")
 
-#     os.makedirs(args.out_dir, exist_ok=True)
-#     out_path = os.path.join(args.out_dir, f"{args.method}_{args.block}.csv")
-#     df.to_csv(out_path, index=False)
-#     print(f"✅ Saved: {out_path}")
-# import wandb
+# #     os.makedirs(args.out_dir, exist_ok=True)
+# #     out_path = os.path.join(args.out_dir, f"{args.method}_{args.block}.csv")
+# #     df.to_csv(out_path, index=False)
+# #     print(f"✅ Saved: {out_path}")
+# # import wandb
 
 
 # Phiên bản chuẩn downdata từ W&B, xử lý dữ liệu và lưu thành CSV với format: pair, round, value
-"""
-Download metrics từ W&B với format chuẩn: pair, round, value
-Loại bỏ tất cả việc xử lý khác - chỉ download dữ liệu
-"""
+# """
+# Download metrics từ W&B với format chuẩn: pair, round, value
+# Loại bỏ tất cả việc xử lý khác - chỉ download dữ liệu
+# """
 
 import re
 import os
@@ -83,7 +83,7 @@ import argparse
 import pandas as pd
 import wandb
 
-def download_from_wandb(entity, project, run_id, method, block):
+def download_from_wandb(client, entity, project, run_id, method, block):
     api = wandb.Api()
     run = api.run(f"{entity}/{project}/runs/{run_id}")
     
@@ -92,16 +92,16 @@ def download_from_wandb(entity, project, run_id, method, block):
     df = pd.DataFrame(rows)
     
     overlap_cols = [
-        f"{block}/pair_0_1/{method}",
-        f"{block}/pair_0_2/{method}",
-        f"{block}/pair_0_3/{method}",
-        f"{block}/pair_0_4/{method}",
-        f"{block}/pair_1_2/{method}",
-        f"{block}/pair_1_3/{method}",
-        f"{block}/pair_1_4/{method}",
-        f"{block}/pair_2_3/{method}",
-        f"{block}/pair_2_4/{method}",
-        f"{block}/pair_3_4/{method}",
+        f"{client}/{block}/pair_0_1/{method}",
+        f"{client}/{block}/pair_0_2/{method}",
+        f"{client}/{block}/pair_0_3/{method}",
+        f"{client}/{block}/pair_0_4/{method}",
+        f"{client}/{block}/pair_1_2/{method}",
+        f"{client}/{block}/pair_1_3/{method}",
+        f"{client}/{block}/pair_1_4/{method}",
+        f"{client}/{block}/pair_2_3/{method}",
+        f"{client}/{block}/pair_2_4/{method}",
+        f"{client}/{block}/pair_3_4/{method}",
         # f"{block}/{method}/pair0_1",
         # f"{block}/{method}/pair0_2",
         # f"{block}/{method}/pair0_3",
@@ -131,8 +131,8 @@ def download_from_wandb(entity, project, run_id, method, block):
     
     for col in cols_exist:
         # Tách pair name
-        pair_name = re.search(r'pair_\d+_\d+', col).group(0)
-        #pair_name = re.search(r'pair\d+_\d+', col).group(0)
+        #pair_name = re.search(r'pair_\d+_\d+', col).group(0)
+        pair_name = re.search(r'pair\d+_\d+', col).group(0)
         # Lấy rows có giá trị cho pair này (không dropna chung)
         df_pair = df[["round", col]].copy()
         df_pair = df_pair.dropna(subset=[col])  # chỉ drop NaN của cột này
@@ -221,15 +221,16 @@ Ví dụ:
     parser.add_argument("--project", required=True, help="W&B project name")
     parser.add_argument("--run_id", required=True, help="W&B run ID")
     parser.add_argument("--method", required=True, help="Metric name (ví dụ: gap_eps, eps_curr)")
-    parser.add_argument("--block", required=True, help="Block name (ví dụ: block0, block1, block4)")
+    parser.add_argument("--block", required=False, help="Block name (ví dụ: block0, block1, block4)")
     parser.add_argument("--output", default=None, help="Output CSV path (mặc định: {block}_{method}.csv)")
-    parser.add_argument("--client", default="Client0", help="Client name (mặc định: Client0)")
+    parser.add_argument("--client", default="client0", help="Client name (mặc định: Client0)")
+    parser.add_argument("--model",default = "FedDBE", help="Model name (mặc định: FedDBE)")
     
     args = parser.parse_args()
     
     # Nếu không chỉ định output, tạo tên mặc định
     if args.output is None:
-        args.output = f"{args.client}_{args.block}_{args.method}.csv"
+        args.output = f"{args.client}_{args.block}_{args.method}_{args.model}.csv"
     
     print(f"\n{'='*70}")
     print(f"🚀 DOWNLOAD DỮ LIỆU TỪ W&B")
@@ -238,106 +239,204 @@ Ví dụ:
     print(f"Project:  {args.project}")
     print(f"Run ID:   {args.run_id}")
     print(f"Method:   {args.method}")
-    print(f"Block:    {args.block}")
     print(f"Output:   {args.output}")
     print(f"{'='*70}\n")
-    
-    # Download dữ liệu
-    print(f"📥 Đang download...")
-    df = download_from_wandb(
-        entity=args.entity,
-        project=args.project,
-        run_id=args.run_id,
-        method=args.method,
-        block=args.block
-    )
-    
-    if df is None:
-        print("[ERROR] Download thất bại")
-        sys.exit(1)
-    
-    # In thống kê
-    print_stats(df, args.method, args.block)
-    
-    # Lưu dữ liệu
-    print(f"💾 Đang lưu dữ liệu...")
-    if save_to_csv(df, args.output):
-        print(f"\n✅ Hoàn tất!")
+# Thay toàn bộ phần if __name__ == "__main__": từ dòng "print(f"📥 Đang download...")" trở xuống
+
+    all_results = []
+
+    print(f"📥 Đang download tất cả clients & blocks...")
+
+    for client in ["client0", "client1", "client2", "client3", "client4"]:
+        for block in ["block0", "block1", "block2", "block3", "block4"]:
+            print(f"\n{'─'*50}")
+            print(f"👤 Client: {client} | 📦 Block: {block}")
+            print(f"{'─'*50}")
+            
+            df = download_from_wandb(
+                client=client,
+                entity=args.entity,
+                project=args.project,
+                run_id=args.run_id,
+                method=args.method,
+                block=block
+            )
+            
+            if df is None:
+                print(f"[WARNING] Bỏ qua {client}/{block} - không có dữ liệu")
+                continue
+            
+            # Thêm cột định danh
+            df.insert(0, "client", client)
+            df.insert(1, "block", block)
+            
+            print(f"  ✓ {len(df)} rows")
+            all_results.append(df)
+
+    # Gom lại và lưu 1 file duy nhất
+    if all_results:
+        df_all = pd.concat(all_results, ignore_index=True)
+        
+        output_path = args.output if args.output else f"{args.method}_{args.model}_all.csv"
+        save_to_csv(df_all, output_path)
+        
+        # Print stats tổng
+        print(f"\n{'='*70}")
+        print(f"📊 TỔNG KẾT")
+        print(f"{'='*70}")
+        print(f"Shape:    {df_all.shape}")
+        print(f"Clients:  {sorted(df_all['client'].unique())}")
+        print(f"Blocks:   {sorted(df_all['block'].unique())}")
+        print(f"Pairs:    {sorted(df_all['pair'].unique())}")
+        print(f"Rounds:   {df_all['round'].nunique()} unique rounds")
+        print(f"{'='*70}")
     else:
-        print(f"\n❌ Lỗi khi lưu dữ liệu")
-        sys.exit(1)
+        print("[ERROR] Không có dữ liệu nào được download")
 
-# # import pandas as pd
+    print(f"\n✅ Hoàn tất!")
 
-# # api = wandb.Api()
-# # run = api.run("ducthu2003/TARGET/ccdok8rl")
+# import pandas as pd
+# from pathlib import Path
+# import re
 
-# # history = run.history(keys=["Task_1_acc"])
-# # df = pd.DataFrame(history)
-# # print(df.head())
+# # =====================================================
+# # CONFIG
+# # =====================================================
 
-# # df.to_csv("Task_1_acc.csv", index=False)
-# # print("Saved to Task_1_acc.csv")
+# MODE = "mean"      # "mean" hoặc "round24"
 
-# # import pandas as pd
-# # import matplotlib.pyplot as plt
+# # Chỉ sửa dòng này
+# BASE_FILE = r"C:\Thu\FCL\Client0_block0_sigma_old.csv"
 
-# # # Từ điển ánh xạ label → màu
-# # colors = {
-# #     'Task 0': 'blue',
-# #     # 'FFA-LoRA': 'orange',
-# #     # 'FedSA-LoRA': 'red',
-# #     # 'FLoRA-CA': 'black',
-# # }
+# PAIR_ORDER = [
+#     "pair_0_1",
+#     "pair_0_2",
+#     "pair_0_3",
+#     "pair_0_4",
+#     "pair_1_2",
+#     "pair_1_3",
+#     "pair_1_4",
+#     "pair_2_3",
+#     "pair_2_4",
+#     "pair_3_4",
+# ]
 
-# # # Custom labels bạn muốn vẽ
-# # custom_labels = ['Task 0']
+# # =====================================================
+# # AUTO GENERATE BLOCK FILES
+# # =====================================================
 
-# # # Dữ liệu
-# # df = pd.read_csv('Task_1_acc.csv')
-# # x = df.iloc[:, 0]
-# # max_columns = [col for col in df.columns if col.endswith('Task_1_acc')]
+# FILES = {}
 
-# # # Map label to columns theo thứ tự custom_labels
-# # label_to_column = dict(zip(custom_labels, max_columns))
+# for block_id in range(5):
+#     path = re.sub(
+#         r"block\d+",
+#         f"block{block_id}",
+#         BASE_FILE
+#     )
+#     FILES[f"block{block_id}"] = path
 
-# # # Sắp xếp các label theo thứ tự trong `colors`
-# # sorted_labels = [label for label in colors if label in custom_labels]
+# # =====================================================
+# # READ DATA
+# # =====================================================
 
-# # # Nếu có label không trong `colors`, thêm vào cuối
-# # other_labels = [label for label in custom_labels if label not in colors]
-# # final_labels = sorted_labels + other_labels
+# result = pd.DataFrame(index=PAIR_ORDER)
 
-# # # Cấu hình smoothing
-# # ema_span = 30
-# # std_window = 3
-# # plt.rcParams.update({'font.size': 18})
+# for block_name, file_path in FILES.items():
 
-# # # Vẽ hình
-# # plt.figure(figsize=(8, 6))
-# # for label in final_labels:
-# #     if label not in label_to_column:
-# #         print(f"⚠️ Label '{label}' không khớp với bất kỳ cột dữ liệu nào.")
-# #         continue
+#     df = pd.read_csv(file_path)
 
-# #     col = label_to_column[label]
-# #     color = colors.get(label, 'black')  # fallback nếu label không có màu
+#     if MODE == "mean":
 
-# #     ema = df[col].ewm(span=ema_span, adjust=False).mean()
-# #     std = df[col].rolling(window=std_window, min_periods=1).std()
+#         values = (
+#             df.groupby("pair")["value"]
+#             .mean()
+#             .reindex(PAIR_ORDER)
+#         )
 
-# #     linestyle = '--' if label == 'STAMP' else '-'  # Dùng nét đứt cho STAMP
-# #     plt.plot(x, ema, label=label, linewidth=2.5, color=color, linestyle=linestyle)
-# #     plt.fill_between(x, ema - std, ema + std, alpha=0.2, color=color)
+#     elif MODE == "round24":
 
-# # # Giao diện
-# # plt.xlabel('Task Steps')
-# # plt.ylabel('Acc')
-# # plt.title('Task 0 Accuracy')
-# # plt.legend()
-# # plt.grid(True)
-# # plt.xlim(left=0, right=4)
-# # plt.ylim(bottom=70, top=80)
-# # plt.tight_layout()
-# # plt.savefig("MNLI-grad.pdf", bbox_inches='tight')
-# # plt.show()
+#         values = (
+#             df[df["round"] == 24]
+#             .set_index("pair")["value"]
+#             .reindex(PAIR_ORDER)
+#         )
+
+#     else:
+#         raise ValueError("MODE phải là 'mean' hoặc 'round24'")
+
+#     result[block_name] = values
+
+# # =====================================================
+# # PRINT RESULT
+# # =====================================================
+
+# pd.set_option("display.max_columns", None)
+# pd.set_option("display.width", 200)
+
+# print("\n==============================")
+# print(f"MODE = {MODE}")
+# print("==============================\n")
+
+# print(result.round(6))
+
+# # =====================================================
+# # BLOCK MEAN
+# # =====================================================
+
+# print("\n==============================")
+# print("Mean of each block")
+# print("==============================\n")
+
+# for block in result.columns:
+#     print(f"{block}: {result[block].mean():.6f}")
+
+# import pandas as pd
+
+# def print_avg_task_block(file_path):
+#     df = pd.read_csv(file_path)
+
+#     # ép kiểu số
+#     num_cols = df.columns.difference(['client1', 'client2'])
+#     df[num_cols] = df[num_cols].apply(pd.to_numeric, errors='coerce')
+
+#     metrics = ["cka", "sigma", "eps", "cosine_similarity", "align@10", "align@20"]
+
+#     for m in metrics:
+#         print("\n" + "="*80)
+#         print(f"METRIC: {m}")
+#         print("="*80)
+
+#         grouped = (
+#             df.groupby(["block_idx", "t"])[m]
+#               .mean()
+#               .reset_index()
+#         )
+
+#         pivot = grouped.pivot(index="block_idx", columns="t", values=m)
+
+#         # sort cho đẹp
+#         pivot = pivot.sort_index().sort_index(axis=1)
+
+#         print(pivot.to_string(float_format=lambda x: f"{x:.4f}"))
+
+
+# if __name__ == "__main__":
+#     file_path = r"C:\Thu\FCL\outputs\client_representation_drift-hetero-ResNet18.csv"
+#     print_avg_task_block(file_path)
+
+# import pandas as pd
+# import os
+
+# base_path = r"C:\Thu\FCL"
+# base_name = "Client0_None_eps_old_FedTarget_block{}.csv"
+
+# total = 0
+# for block in range(5):
+#     file_path = os.path.join(base_path, base_name.format(block))
+#     df = pd.read_csv(file_path)
+#     mean_val = df["value"].mean()
+#     print(f"block{block}: {mean_val:.6f}")
+#     total += mean_val
+
+# print(f"\nTổng trung bình: {total:.6f}")
+# print(f"Trung bình chung: {total / 5:.6f}")

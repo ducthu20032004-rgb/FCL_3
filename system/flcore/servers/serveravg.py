@@ -486,7 +486,7 @@ class FedAvg(Server):
                     # === Ghi CSV (thay thế / bổ sung wandb) ===
                     import csv, os
 
-                    csv_path = "/kaggle/working/FCL_3/drift_results.csv"
+                    csv_path = "C:/Thu/FCL/drift_results.csv"
                     # fieldnames = ["round", "task", "client", "block",
                     #             "drift_trained", "drift_aggre", "drift_global",
                     #             "cka_trained", "cka_aggre", "cka_global"]
@@ -589,6 +589,19 @@ class FedAvg(Server):
                 self.dump_global_task_accuracy_csv(after_task=int(task), glob_iter=int(glob_iter))
             except Exception as e:
                 print(f"[dump global_task_acc] warning: {e}")
+                    # ===== SAVE ALL CLIENT WEIGHTS AFTER EACH TASK =====
+            if getattr(self.args, "save_client_weights", True):
+                import os
+                save_dir = getattr(self.args, "client_weights_dir", "C:/Thu/FCL/client_weights_")
+                os.makedirs(save_dir, exist_ok=True)
+                for client in self.clients:   # ALL clients, không chỉ selected
+                    try:
+                        save_path = os.path.join(save_dir, f"client_{client.id}_task_{task}.pt")
+                        torch.save(client.model.state_dict(), save_path)
+                        print(f"[SAVED] client={client.id} task={task} → {save_path}")
+                    except Exception as save_err:
+                        print(f"[ERROR] save client={client.id} task={task}: {save_err}")
+
             # ===== SAVE CHECKPOINT PER TASK =====
             if getattr(self.args, "save_checkpoint", False):
                 tag = f"task{task}"

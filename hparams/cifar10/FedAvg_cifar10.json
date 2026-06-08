@@ -18,7 +18,7 @@
     "algorithm": "FedAvg",
     "join_ratio": 1.0,
     "random_join_ratio": false,
-    "num_clients": 10,
+    "num_clients": 20,
     "prev": 0,
     "times": 1,
     "eval_gap": 1,

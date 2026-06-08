@@ -6,5 +6,11 @@ UMNN
 gdown
 kornia
 timm
+pandas
 psutil
 scikit-learn
+torchaudio
+ttach
+plotly
+tensorboardX
+matplotlib

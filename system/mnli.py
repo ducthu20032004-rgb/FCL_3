@@ -127,6 +127,100 @@
 #          r"C:\Thu\FCL\outputs\final3_cknna_by_task.png")
 # print("Done!")
 
+import pandas as pd
 import numpy as np
-arr = np.load("dataset/cifar10-classes/0.npy")
-print(arr.shape)  # (N, H, W, 3)
+
+CSV_PATH = r"C:\Thu\FCL\outputs\client_representation_drift-hetero-ResNet18.csv"
+
+df = pd.read_csv(CSV_PATH)
+
+# Rename align columns for convenience
+df = df.rename(columns={"align@10": "cknna10", "align@20": "cknna20"})
+
+METRICS = ["eps", "cka", "cknna10", "sigma"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. Average over ALL client pairs  →  mean per (t, block_idx)
+# ─────────────────────────────────────────────────────────────────────────────
+by_t_block = (
+    df.groupby(["t", "block_idx"])[METRICS]
+    .mean()
+    .reset_index()
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Average over ALL client pairs  →  mean per t  (averaged across blocks too)
+# ─────────────────────────────────────────────────────────────────────────────
+by_t = (
+    df.groupby("t")[METRICS]
+    .mean()
+    .reset_index()
+)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PRINT SECTION 1 – Per (task, block) averaged over all client pairs
+# ═════════════════════════════════════════════════════════════════════════════
+tasks = sorted(by_t_block["t"].unique())
+blocks = sorted(by_t_block["block_idx"].unique())
+
+col_w = 12
+hdr_w = 8
+
+print("=" * 80)
+print("  AVERAGE METRICS PER (TASK, BLOCK)  –  averaged over all client pairs")
+print("=" * 80)
+
+for t in tasks:
+    subset = by_t_block[by_t_block["t"] == t].set_index("block_idx")
+
+    # Header
+    print(f"\n  Task t = {t}")
+    print(f"  {'Block':<{hdr_w}}", end="")
+    for m in METRICS:
+        print(f"  {m:>{col_w}}", end="")
+    print()
+    print("  " + "-" * (hdr_w + len(METRICS) * (col_w + 2)))
+
+    for b in blocks:
+        if b not in subset.index:
+            continue
+        row = subset.loc[b]
+        print(f"  {b:<{hdr_w}}", end="")
+        for m in METRICS:
+            v = row[m]
+            # eps is tiny → scientific; others → fixed
+            if m == "eps":
+                print(f"  {v:>{col_w}.4e}", end="")
+            elif m == "cknna10":
+                print(f"  {v:>{col_w}.4f}", end="")
+            else:
+                print(f"  {v:>{col_w}.6f}", end="")
+        print()
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PRINT SECTION 2 – Per task, averaged over all blocks AND all client pairs
+# ═════════════════════════════════════════════════════════════════════════════
+print("\n")
+print("=" * 80)
+print("  AVERAGE METRICS PER TASK  –  averaged over all blocks & client pairs")
+print("=" * 80)
+print(f"\n  {'Task':<{hdr_w}}", end="")
+for m in METRICS:
+    print(f"  {m:>{col_w}}", end="")
+print()
+print("  " + "-" * (hdr_w + len(METRICS) * (col_w + 2)))
+
+for _, row in by_t.iterrows():
+    t = int(row["t"])
+    print(f"  {t:<{hdr_w}}", end="")
+    for m in METRICS:
+        v = row[m]
+        if m == "eps":
+            print(f"  {v:>{col_w}.4e}", end="")
+        elif m == "cknna10":
+            print(f"  {v:>{col_w}.4f}", end="")
+        else:
+            print(f"  {v:>{col_w}.6f}", end="")
+    print()
+
+print("\nDone.")
