@@ -89,7 +89,8 @@ def run(args):
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=179776).to(args.device)
             else:
                 args.model = FedAvgCNN(in_features=3, num_classes=args.num_classes, dim=10816).to(args.device)
-
+        elif model_str == "ResNet101":
+            args.model = torchvision.models.resnet101(pretrained=False, num_classes=args.num_classes).to(args.device)
         elif model_str == "ResNet50":
             args.model = torchvision.models.resnet50(pretrained=False, num_classes=args.num_classes).to(args.device)
         elif model_str == "ResNet50-pretrained":

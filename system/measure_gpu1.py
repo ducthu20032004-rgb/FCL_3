@@ -14,7 +14,7 @@ import torchvision
 import wandb
 from tqdm import tqdm
 from system.flcore.metrics.average_forgetting import metric_average_forgetting
-from torchvision.models import resnet18
+from torchvision.models import resnet18,resnet34,resnet50
 from torchvision.models.resnet import BasicBlock
 from sklearn.linear_model import LinearRegression
 from system.measure_alignment import compute_alignment, compute_alignment_from_arrays
@@ -186,7 +186,8 @@ def compute_bwt(accuracy_matrix: list, task: int) -> float:
     return bwt_sum / count if count > 0 else 0.0
 # evaluate after end 1 task
 def load_resnet18_from_checkpoint(ckpt_path: str, load_head: bool = False, num_classes: int = 10) -> torch.nn.Module:
-    model  = resnet18(weights=None)
+    #model  = resnet18(weights=None)
+    model = resnet18(weights=None)
     raw_sd = torch.load(ckpt_path, map_location='cpu')
 
     new_sd = {}
@@ -215,7 +216,7 @@ def load_model_with_head(ckpt_path: str, num_classes: int) -> torch.nn.Module:
 
     head_keys = [k for k in raw_sd.keys() if k.startswith('head.')]
     # print(f'Head keys: {head_keys}')
-
+    
     model = resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
@@ -424,7 +425,7 @@ def measure_all_representation_drift(args):
         root = 'kaggle/working'
     
     output_file = (
-        f'{root}/representation_drift_temporal_2tasks'
+        f'{root}/representation_drift_temporal_5tasks_resnet18'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
@@ -437,6 +438,7 @@ def measure_all_representation_drift(args):
         )
 
     task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
+    #task_pairs = [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9)]
     num_blocks  = 5
     total       = args.num_clients * len(task_pairs) * num_blocks
     done        = 0

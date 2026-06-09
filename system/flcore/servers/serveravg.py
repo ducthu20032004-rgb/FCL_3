@@ -316,9 +316,9 @@ class FedAvg(Server):
                         client._model_after_local = copy.deepcopy(client.model)
                     except Exception:
                         pass
-                    if i == 24:  
+                    if i == 25:  
                         try:
-                            save_dir =  "/home/ghostm211/Thu/FCL_3/FedAVG_CIFAR100_5tasks/"
+                            save_dir =  "/home/ghostm211/Thu/FCL_3/FedAVG_CIFAR100_5tasks_resnet101/"
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
