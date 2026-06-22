@@ -39,3 +39,9 @@ FedAVG_CIFAR100_5tasks_Resnet34/*
 FedAVG_CIFAR100_50tasks/*
 client_weights_Vit/*
 client_weights_/*
+
+
+*.pt
+*.pth
+*.ckpt
+*.npy
