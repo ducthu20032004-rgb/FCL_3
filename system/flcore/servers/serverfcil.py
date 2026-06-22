@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
+import os
 
 from system.flcore.clients.clientfcil import clientFCIL
 from system.flcore.servers.serverbase import Server
@@ -252,6 +253,17 @@ class FedFCIL(Server):
                     # FCIL hooks
                     if client.id in old_client_0:
                         self._call_client_before_train(client, task_id, 0)
+                        if i == 24:  
+                            try:
+                                save_dir =  "/home/ghostm211/Thu/FCL_3/weight_feddbe/weight_client_round"  # Thay đổi đường dẫn theo nhu cầu
+                                os.makedirs(save_dir, exist_ok=True)
+                                save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
+                                
+                                model_to_save = client.model
+                                torch.save(model_to_save.state_dict(), save_path)
+                                print(f"[SAVED] client={client.id} task={task} round={i} → {save_path}")
+                            except Exception as save_err:
+                                print(f"[ERROR] Failed to save client {client.id} task {task} round {i}: {save_err}")
                     else:
                         self._call_client_before_train(client, task_id, 1)
                     self._call_client_update_new_set(client)

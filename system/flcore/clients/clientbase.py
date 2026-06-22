@@ -127,7 +127,7 @@ class Client(object):
         elif self.args.dataset == 'CIFAR10':
             train_data = read_client_data_FCL_cifar10(self.id, task=task, classes_per_task=self.args.cpt, count_labels=False, train=True)
             
-        return DataLoader(train_data, batch_size, drop_last=True, shuffle=True,num_workers=4,pin_memory=True, persistent_workers=True,prefetch_factor=2)
+        return DataLoader(train_data, batch_size, drop_last=True, shuffle=True,num_workers=0,pin_memory=False, persistent_workers=False)
 
     def load_test_data(self, task, batch_size=None):
         if batch_size == None:
@@ -140,7 +140,7 @@ class Client(object):
         elif self.args.dataset == 'CIFAR10':
             test_data = read_client_data_FCL_cifar10(self.id, task=task, classes_per_task=self.args.cpt, count_labels=False, train=False)
 
-        return DataLoader(test_data, batch_size, drop_last=False, shuffle=True,num_workers=4,pin_memory=True, persistent_workers=True,prefetch_factor=2)  
+        return DataLoader(test_data, batch_size, drop_last=False, shuffle=True,num_workers=0,pin_memory=False, persistent_workers=False)  
 
     def set_parameters(self, model):
         for new_param, old_param in zip(model.parameters(), self.model.parameters()):

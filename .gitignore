@@ -34,3 +34,8 @@ figures/*
 logging/*
 material_experiment/*
 plots/*
+FedAVG_CIFAR100_4tasks/*
+FedAVG_CIFAR100_5tasks_Resnet34/*
+FedAVG_CIFAR100_50tasks/*
+client_weights_Vit/*
+client_weights_/*

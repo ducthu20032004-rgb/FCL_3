@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import wandb
 import numpy as np
-
+import os
 from torch.nn.utils import (
     vector_to_parameters,
     parameters_to_vector
@@ -316,18 +316,18 @@ class FedAvg(Server):
                         client._model_after_local = copy.deepcopy(client.model)
                     except Exception:
                         pass
-                    # if client.id in [0, 1,2,3,4]:  
-                    #     try:
-                    #         save_dir =  "C:/Thu/FCL/checkpoints"
-                    #         os.makedirs(save_dir, exist_ok=True)
-                    #         save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
+                    if i == 24:  
+                        try:
+                            save_dir =  f"C:/Thu/FCL/FedAVG_CIFAR10_5tasks_ViTTi/"
+                            os.makedirs(save_dir, exist_ok=True)
+                            save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
-                    #         model_to_save = client.model
-                    #         torch.save(model_to_save.state_dict(), save_path)
-                    #         print(f"[SAVED] client={client.id} task={task} round={i} → {save_path}")
-                    #     except Exception as save_err:
-                    #         print(f"[ERROR] Failed to save client {client.id} task {task} round {i}: {save_err}")
-                    #         import traceback; traceback.print_exc()
+                            model_to_save = client.model
+                            torch.save(model_to_save.state_dict(), save_path)
+                            print(f"[SAVED] client={client.id} task={task} round={i} → {save_path}")
+                        except Exception as save_err:
+                            print(f"[ERROR] Failed to save client {client.id} task {task} round {i}: {save_err}")
+                            import traceback; traceback.print_exc()
 
 
                     # compute delta L2 of local update
@@ -383,142 +383,142 @@ class FedAvg(Server):
                     self.aggregate()
                 model_global_after = copy.deepcopy(self.global_model)
 
-                if getattr(self.args, "measure_drift", True):
-                    print("Drift thanh cong")
-                    try:
-                        # dict lưu kết quả per client per block
-                        drift_results = {}  # client.id -> {block_idx -> {metric: value}}
+                # if getattr(self.args, "measure_drift", True):
+                #     print("Drift thanh cong")
+                #     try:
+                #         # dict lưu kết quả per client per block
+                #         drift_results = {}  # client.id -> {block_idx -> {metric: value}}
 
-                        for j, client in enumerate(self.selected_clients):
+                #         for j, client in enumerate(self.selected_clients):
 
-                            if not hasattr(client, "_model_after_local"):
-                                continue
-                            if client.id in [5,6,7,8,9]:
-                                continue
-                            test_data = read_client_data_FCL_cifar10(
-                                client.id, task=task,
-                                classes_per_task=self.args.cpt,
-                                count_labels=False, train=False
-                            )
+                #             if not hasattr(client, "_model_after_local"):
+                #                 continue
+                #             if client.id in [5,6,7,8,9]:
+                #                 continue
+                #             test_data = read_client_data_FCL_cifar10(
+                #                 client.id, task=task,
+                #                 classes_per_task=self.args.cpt,
+                #                 count_labels=False, train=False
+                #             )
 
-                            drift_results[client.id] = {}
+                #             drift_results[client.id] = {}
 
-                            for block_idx in [4]:
-                                target_layer = f'block{block_idx}'
-                                try:
-                                    feat_global = compute_feature_resnet18_wrap(
-                                        model_global_before, task, test_data, target_layer,
-                                        self.args.seed, self.args)
-                                    feat_local = compute_feature_resnet18_wrap(
-                                        client._model_after_local, task, test_data, target_layer,
-                                        self.args.seed, self.args)
-                                    feat_aggre = compute_feature_resnet18_wrap(
-                                        model_global_after, task, test_data, target_layer,
-                                        self.args.seed, self.args)
+                #             for block_idx in [4]:
+                #                 target_layer = f'block{block_idx}'
+                #                 try:
+                #                     feat_global = compute_feature_resnet18_wrap(
+                #                         model_global_before, task, test_data, target_layer,
+                #                         self.args.seed, self.args)
+                #                     feat_local = compute_feature_resnet18_wrap(
+                #                         client._model_after_local, task, test_data, target_layer,
+                #                         self.args.seed, self.args)
+                #                     feat_aggre = compute_feature_resnet18_wrap(
+                #                         model_global_after, task, test_data, target_layer,
+                #                         self.args.seed, self.args)
 
-                                    drift_trained  = compute_eps(feat_global, feat_local)
-                                    drift_aggre    = compute_eps(feat_local,  feat_aggre)
-                                    drift_global = compute_eps(feat_global,feat_aggre)
-                                    # _,cka_trained    = compute_cka(feat_global, feat_local)
-                                    # _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
-                                    #_,cka_global = compute_cka(feat_global,feat_aggre)
-                                    cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
-                                    cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
-                                    cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
-                                    drift_results[client.id][block_idx] = {
-                                        "drift_trained": drift_trained,
-                                        "drift_aggre":   drift_aggre,
-                                        "drift_global":drift_global,
-                                        # "cka_trained":   cka_trained,
-                                        # "cka_aggre":     cka_aggre,
-                                        #"cka_global":cka_global,
-                                        "cknna_global":cknna_global,
-                                        "cknna_trained": cknna_trained,
-                                        "cknna_aggre":   cknna_aggre,
+                #                     drift_trained  = compute_eps(feat_global, feat_local)
+                #                     drift_aggre    = compute_eps(feat_local,  feat_aggre)
+                #                     drift_global = compute_eps(feat_global,feat_aggre)
+                #                     # _,cka_trained    = compute_cka(feat_global, feat_local)
+                #                     # _,cka_aggre      = compute_cka(feat_local,  feat_aggre)
+                #                     #_,cka_global = compute_cka(feat_global,feat_aggre)
+                #                     cknna_trained,_  = compute_alignment_from_arrays(feat_global, feat_local, "mutual_knn", topk=10, precise=True)
+                #                     cknna_aggre ,_   = compute_alignment_from_arrays(feat_local,  feat_aggre, "mutual_knn", topk=10, precise=True)
+                #                     cknna_global,_ = compute_alignment_from_arrays(feat_global,feat_aggre, "mutual_knn", topk=10, precise=True)
+                #                     drift_results[client.id][block_idx] = {
+                #                         "drift_trained": drift_trained,
+                #                         "drift_aggre":   drift_aggre,
+                #                         "drift_global":drift_global,
+                #                         # "cka_trained":   cka_trained,
+                #                         # "cka_aggre":     cka_aggre,
+                #                         #"cka_global":cka_global,
+                #                         "cknna_global":cknna_global,
+                #                         "cknna_trained": cknna_trained,
+                #                         "cknna_aggre":   cknna_aggre,
 
-                                    }
+                #                     }
 
-                                    # print per block per client
-                                    print(
-                                        f"[Drift] round={disp_round} task={task} client={client.id} {target_layer} | "
-                                        # f"drift_trained={drift_trained:.4f} drift_aggre={drift_aggre:.4f} | drift_global = {drift_global} |"
-                                        # f"cka_trained={cka_trained:.4f} cka_aggre={cka_aggre:.4f} | cka_global = {cka_global} |"
-                                        f"cknna_trained={cknna_trained:.4f} cknna_aggre={cknna_aggre:.4f} cknna_global = {cknna_global}"
-                                    )
+                #                     # print per block per client
+                #                     print(
+                #                         f"[Drift] round={disp_round} task={task} client={client.id} {target_layer} | "
+                #                         # f"drift_trained={drift_trained:.4f} drift_aggre={drift_aggre:.4f} | drift_global = {drift_global} |"
+                #                         # f"cka_trained={cka_trained:.4f} cka_aggre={cka_aggre:.4f} | cka_global = {cka_global} |"
+                #                         f"cknna_trained={cknna_trained:.4f} cknna_aggre={cknna_aggre:.4f} cknna_global = {cknna_global}"
+                #                     )
 
-                                except Exception as e:
-                                    print(f"[Drift] client={client.id} block{block_idx} error: {e}")
-                                    drift_results[client.id][block_idx] = None
+                #                 except Exception as e:
+                #                     print(f"[Drift] client={client.id} block{block_idx} error: {e}")
+                #                     drift_results[client.id][block_idx] = None
 
-                            # append vào client_summaries đúng client
-                            block_summary = {}
-                            for block_idx in [4]:
-                                r = drift_results[client.id].get(block_idx)
-                                if r is None:
-                                    continue
-                                for metric_name, val in r.items():
-                                    block_summary[f"block{block_idx}/{metric_name}"] = val
-                            client_summaries[j].update(block_summary)
+                #             # append vào client_summaries đúng client
+                #             block_summary = {}
+                #             for block_idx in [4]:
+                #                 r = drift_results[client.id].get(block_idx)
+                #                 if r is None:
+                #                     continue
+                #                 for metric_name, val in r.items():
+                #                     block_summary[f"block{block_idx}/{metric_name}"] = val
+                #             client_summaries[j].update(block_summary)
 
-                        # wandb log: per-client per block per metric
-                        if getattr(self.args, "wandb", True):
-                            # Determine whether to log this round
-                            log_every_round = getattr(self.args, "wandb_drift_every_round", True)  # test mode
-                            final_round_of_task = 24  # production: only log at round 24
+                #         # wandb log: per-client per block per metric
+                #         if getattr(self.args, "wandb", True):
+                #             # Determine whether to log this round
+                #             log_every_round = getattr(self.args, "wandb_drift_every_round", True)  # test mode
+                #             final_round_of_task = 24  # production: only log at round 24
                             
-                            should_log = log_every_round or (i == final_round_of_task)
+                #             should_log = log_every_round or (i == final_round_of_task)
                             
-                            if should_log and i == 0:  # keep your existing round==0 guard
-                                for cid in drift_results:
-                                    for block_idx in [4]:
-                                        if drift_results[cid].get(block_idx) is None:
-                                            continue
-                                        wb_drift = {"round": disp_round, "task": task, "client": cid}
-                                        for metric_name in ["drift_trained", "drift_aggre", "cka_trained", "cka_aggre"]:
-                                            if metric_name in drift_results[cid][block_idx]:
-                                                wb_drift[f"drift/client{cid}/block{block_idx}/{metric_name}"] = float(drift_results[cid][block_idx][metric_name])
-                                        wandb.log(wb_drift)
+                #             if should_log and i == 0:  # keep your existing round==0 guard
+                #                 for cid in drift_results:
+                #                     for block_idx in [4]:
+                #                         if drift_results[cid].get(block_idx) is None:
+                #                             continue
+                #                         wb_drift = {"round": disp_round, "task": task, "client": cid}
+                #                         for metric_name in ["drift_trained", "drift_aggre", "cka_trained", "cka_aggre"]:
+                #                             if metric_name in drift_results[cid][block_idx]:
+                #                                 wb_drift[f"drift/client{cid}/block{block_idx}/{metric_name}"] = float(drift_results[cid][block_idx][metric_name])
+                #                         wandb.log(wb_drift)
 
-                    except Exception as e:
-                        print(f"[Drift measure] warning: {e}")
+                #     except Exception as e:
+                #         print(f"[Drift measure] warning: {e}")
 
-                        import traceback; traceback.print_exc()   
-                    # === Ghi CSV (thay thế / bổ sung wandb) ===
-                    import csv, os
+                #         import traceback; traceback.print_exc()   
+                #     # === Ghi CSV (thay thế / bổ sung wandb) ===
+                #     import csv, os
 
-                    csv_path = "C:/Thu/FCL/drift_results.csv"
-                    # fieldnames = ["round", "task", "client", "block",
-                    #             "drift_trained", "drift_aggre", "drift_global",
-                    #             "cka_trained", "cka_aggre", "cka_global"]
-                    fieldnames = ["round", "task", "client", "block",
-                                  "cka_global","cknna_trained","cknna_aggre","cknna_global"]
-                    write_header = not os.path.exists(csv_path)
+                #     csv_path = "/C:/Thu/FCL_3/drift_results.csv"
+                #     # fieldnames = ["round", "task", "client", "block",
+                #     #             "drift_trained", "drift_aggre", "drift_global",
+                #     #             "cka_trained", "cka_aggre", "cka_global"]
+                #     fieldnames = ["round", "task", "client", "block",
+                #                   "cka_global","cknna_trained","cknna_aggre","cknna_global"]
+                #     write_header = not os.path.exists(csv_path)
 
-                    with open(csv_path, "a", newline="") as f:
-                        writer = csv.DictWriter(f, fieldnames=fieldnames)
-                        if write_header:
-                            writer.writeheader()
+                #     with open(csv_path, "a", newline="") as f:
+                #         writer = csv.DictWriter(f, fieldnames=fieldnames)
+                #         if write_header:
+                #             writer.writeheader()
 
-                        for cid in drift_results:
-                            for block_idx in [4]:
-                                r = drift_results[cid].get(block_idx)
-                                if r is None:
-                                    continue
-                                writer.writerow({
-                                    "round":         disp_round,
-                                    "task":          task,
-                                    "client":        cid,
-                                    "block":         block_idx,
-                                    # "drift_trained": round(float(r.get("drift_trained", float("nan"))), 6),
-                                    # "drift_aggre":   round(float(r.get("drift_aggre",   float("nan"))), 6),
-                                    # "drift_global":  round(float(r.get("drift_global",  float("nan"))), 6),
-                                    # "cka_trained":   round(float(r.get("cka_trained",   float("nan"))), 6),
-                                    # "cka_aggre":     round(float(r.get("cka_aggre",     float("nan"))), 6),
-                                    "cka_global":    round(float(r.get("cka_global",    float("nan"))), 6),
-                                    "cknna_trained": round(float(r.get("cknna_trained", float("nan"))), 6),
-                                    "cknna_aggre":   round(float(r.get("cknna_aggre",   float("nan"))), 6),
-                                    "cknna_global":  round(float(r.get("cknna_global",  float("nan"))), 6)
-                                })    
+                #         for cid in drift_results:
+                #             for block_idx in [4]:
+                #                 r = drift_results[cid].get(block_idx)
+                #                 if r is None:
+                #                     continue
+                #                 writer.writerow({
+                #                     "round":         disp_round,
+                #                     "task":          task,
+                #                     "client":        cid,
+                #                     "block":         block_idx,
+                #                     # "drift_trained": round(float(r.get("drift_trained", float("nan"))), 6),
+                #                     # "drift_aggre":   round(float(r.get("drift_aggre",   float("nan"))), 6),
+                #                     # "drift_global":  round(float(r.get("drift_global",  float("nan"))), 6),
+                #                     # "cka_trained":   round(float(r.get("cka_trained",   float("nan"))), 6),
+                #                     # "cka_aggre":     round(float(r.get("cka_aggre",     float("nan"))), 6),
+                #                     "cka_global":    round(float(r.get("cka_global",    float("nan"))), 6),
+                #                     "cknna_trained": round(float(r.get("cknna_trained", float("nan"))), 6),
+                #                     "cknna_aggre":   round(float(r.get("cknna_aggre",   float("nan"))), 6),
+                #                     "cknna_global":  round(float(r.get("cknna_global",  float("nan"))), 6)
+                #                 })    
                 # ===== SAVE CHECKPOINT PER ROUND (mỗi 10 round) =====
                 if getattr(self.args, "save_checkpoint", False) and glob_iter > 0 and ((glob_iter+1) % 1 == 0):
                     self.save_checkpoint(glob_iter=glob_iter, tag="latest")
@@ -591,8 +591,7 @@ class FedAvg(Server):
                 print(f"[dump global_task_acc] warning: {e}")
                     # ===== SAVE ALL CLIENT WEIGHTS AFTER EACH TASK =====
             if getattr(self.args, "save_client_weights", True):
-                import os
-                save_dir = getattr(self.args, "client_weights_dir", "C:/Thu/FCL/client_weights_")
+                save_dir = getattr(self.args, "client_weights_dir", "C:/Thu/FCL/client_weights_Vit")
                 os.makedirs(save_dir, exist_ok=True)
                 for client in self.clients:   # ALL clients, không chỉ selected
                     try:

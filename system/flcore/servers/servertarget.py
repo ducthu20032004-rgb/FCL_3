@@ -13,8 +13,8 @@ What this adds (vs. your original):
 The training sequence (send_models → client.train → receive_models → receive_grads
 → aggregate_parameters → data_generation) is kept intact.
 """
-
-import os
+import wandb
+import os,csv
 import time
 import copy
 import shutil
@@ -37,11 +37,11 @@ try:
     from system.utils.rich_progress import RichRoundLogger
 except Exception:
     RichRoundLogger = None
-
-from system.measure_gpu1 import *
+from system.utils.data_utils import read_client_data_FCL_cifar10,read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+from system.measure_gpu1 import DEVICE,get_resnet18_blocks, compute_eps,  compute_alignment_from_arrays
 import statistics
 
-
+from torch.utils.data import DataLoader
 # ---------- Pretty logger (safe if not installed) ----------
 try:
     from system.utils.rich_progress import RichRoundLogger
@@ -61,7 +61,7 @@ def _make_loader(dataset, batch_size: int = 256):
     # Case 1: torch.utils.data.Dataset chuan
     if isinstance(dataset, Dataset):
         return DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                          num_workers=0, pin_memory=False)
 
     # Case 2: (X, Y) - moi phan tu la array/tensor ca batch
     # Nhan dien: co dung 2 phan tu va phan tu dau co >= 2 chieu (batch dim + feature dims)
@@ -73,7 +73,7 @@ def _make_loader(dataset, batch_size: int = 256):
         xs = torch.as_tensor(np.array(X, dtype=np.float32))
         ys = torch.as_tensor(np.array(Y)).long()
         return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
-                          num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                          num_workers=0, pin_memory=False)
 
     # Case 3: list of (x_i, y_i) sample tuples
     xs, ys = [], []
@@ -83,7 +83,7 @@ def _make_loader(dataset, batch_size: int = 256):
     xs = torch.stack(xs)
     ys = torch.stack(ys)
     return DataLoader(TensorDataset(xs, ys), batch_size=batch_size, shuffle=False,
-                      num_workers=0, pin_memory=(DEVICE.type == 'cuda'))
+                      num_workers=0, pin_memory=False)
 def compute_feature_resnet18_wrap(_model, _model_task_index, _dataset, _target_layer_index: str, seed, args):
     """
     Trích xuất features trên GPU, trả về numpy array (N, D).
@@ -240,7 +240,7 @@ class FedTARGET(Server):
 
                 for i in range(len(self.clients)):
                     if self.args.partition_options == 'tuan':
-                        from system.utils.data_utils import read_client_data_FCL_cifar10,read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                        
                         if self.args.dataset == 'IMAGENET1k':
                             train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         elif self.args.dataset == 'CIFAR100':
@@ -249,22 +249,22 @@ class FedTARGET(Server):
                             train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True)
                         else:
                             raise NotImplementedError("Not supported dataset")
-                    elif self.args.partition_options == 'hetero':
-                        from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
-                        if self.args.dataset == 'IMAGENET1k':
-                            train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                    seed = self.args.seed, alpha = self.args.alpha,
-                                                                                    total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        elif self.args.dataset == 'CIFAR100':
-                            train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                seed = self.args.seed, alpha = self.args.alpha,
-                                                                                total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        elif self.args.dataset == 'CIFAR10':
-                            train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
-                                                                                seed = self.args.seed, alpha = self.args.alpha,
-                                                                                total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
-                        else:
-                            raise NotImplementedError("Not supported dataset")
+                    # elif self.args.partition_options == 'hetero':
+                    #     from system.utils.data_utils_mine import read_client_data_FCL_cifar10, read_client_data_FCL_cifar100, read_client_data_FCL_imagenet1k
+                    #     if self.args.dataset == 'IMAGENET1k':
+                    #         train_data, label_info = read_client_data_FCL_imagenet1k(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                                 seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                                 total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     elif self.args.dataset == 'CIFAR100':
+                    #         train_data, label_info = read_client_data_FCL_cifar100(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                             seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                             total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     elif self.args.dataset == 'CIFAR10':
+                    #         train_data, label_info = read_client_data_FCL_cifar10(i, task=task, classes_per_task=self.args.cpt, count_labels=True,
+                    #                                                             seed = self.args.seed, alpha = self.args.alpha,
+                    #                                                             total_clients = self.args.num_clients,task_disorder = self.args.task_disorder)
+                    #     else:
+                    #         raise NotImplementedError("Not supported dataset")
                         
                     self.clients[i].next_task(train_data, label_info)
                     self.clients[i].old_network = copy.deepcopy(self.clients[i].model)
@@ -345,16 +345,15 @@ class FedTARGET(Server):
                         # ── Lưu checkpoint sau mỗi round ──────────────────────────
                         try:
                             cid = self._cid(client, j)
-                            save_dir = os.path.join(
-                                getattr(self.args, "checkpoint_dir", "checkpoints"), "Target"
-                            )
+                            save_dir = "/home/ghostm211/Thu/FCL_3/weight_fedTARGET/weight_client_round/"  # Thay đổi đường dẫn theo nhu cầu
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = os.path.join(
                                 save_dir,
                                 f"client_{cid}_task_{task}_round_{i}.pt"
                             )
-                            torch.save(client.model.state_dict(), save_path)
-                            print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
+                            if client.id in [0,1,2,3,4]:
+                                torch.save(client.model.state_dict(), save_path)
+                                print(f"[CKPT] client={cid} task={task} round={i} → {save_path}")
                         except Exception as save_err:
                             print(f"[CKPT ERROR] client={cid} task={task} round={i}: {save_err}")
                         # ──────────────────────────────────────────────────────────
@@ -513,10 +512,9 @@ class FedTARGET(Server):
                         print(f"[Drift measure] warning: {e}")
 
                         import traceback; traceback.print_exc()   
-                    # === Ghi CSV (thay thế / bổ sung wandb) ===
-                    import csv, os
 
-                    csv_path = "/kaggle/working/FCL_3/drift_results.csv"
+
+                    csv_path = "/home/ghostm211/Thu/FCL_3/weight_fedTARGET/drift_results.csv"
                     fieldnames = ["round", "task", "client", "block",
                                 "drift_trained", "drift_aggre", "drift_global",
                                 "cknna_trained", "cknna_aggre", "cknna_global"]

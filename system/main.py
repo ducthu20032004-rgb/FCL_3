@@ -39,7 +39,7 @@ from system.flcore.trainmodel.transformer import *
 from system.flcore.trainmodel.vit_prompt_l2p import *
 from system.flcore.trainmodel.PILORA.VLT import *
 from system.flcore.trainmodel.PILORA.VITLORA import vitlora
-
+import timm
 warnings.simplefilter("ignore")
 
 torch.manual_seed(0)
@@ -103,6 +103,15 @@ def run(args):
             args.model = torchvision.models.swin_t(weights=None, num_classes=args.num_classes).to(args.device)
         elif model_str == "AFFCLModel":    
             args.model = AFFCLModel(args).to(args.device)
+        elif model_str == "ViT-Ti":
+            args.model = timm.create_model(
+                'vit_tiny_patch16_224',
+                pretrained=False,
+                num_classes=args.num_classes,
+                img_size=32,        # ← override input size
+                patch_size=4,       # ← patch 16 trên ảnh 32 chỉ cho 4 patch → quá ít
+                                    #   patch 4 cho (32/4)^2 = 64 patches, hợp lý hơn
+            ).to(args.device)
         elif model_str == "VitL2P":
             args.model = VitL2P(
                 num_classes=args.num_classes,
@@ -119,10 +128,20 @@ def run(args):
         else:
             raise NotImplementedError
 
-        # select algorithm
+        # Helper: tự detect tên head layer (fc hoặc head)
+        def _split_head(model):
+            if hasattr(model, 'fc'):
+                attr = 'fc'
+            elif hasattr(model, 'head'):
+                attr = 'head'
+            else:
+                raise AttributeError("Không tìm thấy fc hoặc head trong model")
+            head = copy.deepcopy(getattr(model, attr))
+            setattr(model, attr, nn.Identity())
+            return model, head
+
         if args.algorithm == "FedAvg":
-            args.head = copy.deepcopy(args.model.fc)
-            args.model.fc = nn.Identity()
+            args.model, args.head = _split_head(args.model)
             args.model = BaseHeadSplit(args.model, args.head)
             server = FedAvg(args, i)
 

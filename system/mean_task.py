@@ -11,12 +11,12 @@ def main():
 
     # Tính trung bình theo block trên tất cả client
     result = (
-        df.groupby("block_idx")[["eps", "sigma", "cka"]]
+        df.groupby("block")[["eps_old", "sigma_old", "align10"]]
         .mean()
         .rename(columns={
-            "eps":   "avg_eps",
-            "sigma": "avg_sigma",
-            "cka":   "avg_cka",
+            "eps_old":   "avg_eps",
+            "sigma_old": "avg_sigma",
+            "align10": "CKNNA@10",
         })
     )
 
