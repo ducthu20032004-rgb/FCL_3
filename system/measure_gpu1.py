@@ -273,8 +273,7 @@ def compute_bwt(accuracy_matrix: list, task: int) -> float:
     return bwt_sum / count if count > 0 else 0.0
 # evaluate after end 1 task
 def load_resnet18_from_checkpoint(ckpt_path: str, load_head: bool = False, num_classes: int = 10) -> torch.nn.Module:
-    #model  = resnet18(weights=None)
-    model = resnet50(weights=None)
+    model  = resnet18(weights=None)
     raw_sd = torch.load(ckpt_path, map_location='cpu')
 
     new_sd = {}
@@ -304,8 +303,8 @@ def load_model_with_head(ckpt_path: str, num_classes: int) -> torch.nn.Module:
 
     head_keys = [k for k in raw_sd.keys() if k.startswith('head.')]
     # print(f'Head keys: {head_keys}')
-    
-    model = resnet50(weights=None)
+
+    model = resnet18(weights=None)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     new_sd = {}
@@ -513,7 +512,7 @@ def measure_all_representation_drift(args):
         root = 'kaggle/working'
     
     output_file = (
-        f'{root}/representation_drift_temporal_2tasks'
+        f'{root}/representation_drift_temporal_5tasks_resnet18'
         f'-{args.partition_options}-{args.backbone}.csv'
     )
 
@@ -525,8 +524,7 @@ def measure_all_representation_drift(args):
             'linear_cka_old,align10\n'
         )
 
-    #task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
-    task_pairs = [(0,1)]
+    task_pairs = list(itertools.combinations(range(args.num_tasks), 2))
     num_blocks  = 5
     total       = args.num_clients * len(task_pairs) * num_blocks
     done        = 0
