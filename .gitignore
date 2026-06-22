@@ -45,3 +45,4 @@ client_weights_/*
 *.pth
 *.ckpt
 *.npy
+dataset/
