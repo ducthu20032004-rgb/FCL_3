@@ -817,7 +817,7 @@ def measure_all_drift_follow_task_client_pair(args):
         with open(output_file, 'w') as f:
             f.write('block_idx,client1,client2,t,'
                     'cka,sigma,eps,'
-                    'cosine_similarity,'
+                    # 'cosine_similarity,'
                     'align@10,align@20\n')
 
     client_pairs = list(itertools.combinations(range(args.num_clients), 2))
@@ -850,10 +850,10 @@ def measure_all_drift_follow_task_client_pair(args):
             scatters = pair_scatters[(client, client_prime)]
             logger.info(f'  ┌── Client pair ({client}, {client_prime})')
 
-            #ckpt_client       = get_model_path_no_round(args.saving_dir, client,       task_id)
-            ckpt_client = get_model_path(args.saving_dir, client,       task_id, 24)
-            ckpt_client_prime = get_model_path(args.saving_dir, client_prime, task_id, 24)
-            #ckpt_client_prime = get_model_path_no_round(args.saving_dir, client_prime, task_id)
+            ckpt_client       = get_model_path_no_round(args.saving_dir, client,       task_id)
+            #ckpt_client = get_model_path(args.saving_dir, client,       task_id, 24)
+            #ckpt_client_prime = get_model_path(args.saving_dir, client_prime, task_id, 24)
+            ckpt_client_prime = get_model_path_no_round(args.saving_dir, client_prime, task_id)
 
             skip = False
             for ckpt in [ckpt_client, ckpt_client_prime]:
@@ -874,16 +874,16 @@ def measure_all_drift_follow_task_client_pair(args):
             loader_c      = _make_loader(shared_probe)
             loader_cp     = _make_loader(shared_probe)
 
-            logits_c_list  = []
-            logits_cp_list = []
-            for x, _ in loader_c:
-                logits_c_list.append(model_head_c(x.to(DEVICE)).detach().cpu())
-            for x, _ in loader_cp:
-                logits_cp_list.append(model_head_cp(x.to(DEVICE)).detach().cpu())
+            # logits_c_list  = []
+            # logits_cp_list = []
+            # for x, _ in loader_c:
+            #     logits_c_list.append(model_head_c(x.to(DEVICE)).detach().cpu())
+            # for x, _ in loader_cp:
+            #     logits_cp_list.append(model_head_cp(x.to(DEVICE)).detach().cpu())
 
-            logits_c  = torch.cat(logits_c_list,  dim=0)
-            logits_cp = torch.cat(logits_cp_list, dim=0)
-            cos_sim   = torch.nn.functional.cosine_similarity(logits_c, logits_cp, dim=1).mean().item()
+            # logits_c  = torch.cat(logits_c_list,  dim=0)
+            # logits_cp = torch.cat(logits_cp_list, dim=0)
+            # cos_sim   = torch.nn.functional.cosine_similarity(logits_c, logits_cp, dim=1).mean().item()
 
             for num_block in range(num_blocks):
                 target_layer = f'block{num_block}'
@@ -904,7 +904,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     done += 1
                     logger.info(
                         f'  │  [{done}/{total}] {target_layer} | '
-                        f'cos_sim={cos_sim:.4f}  σ={sigma:.4f}  '
+                        f' σ={sigma:.4f}  '
                         f'ε={eps:.4f}  CKA={cka:.4f}  '
                         f'align@10={align_scores[10]:.4f}  align@20={align_scores[20]:.4f}'
                     )
@@ -914,7 +914,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     line = (
                         f'{num_block},{client},{client_prime},{task_id},'
                         f'{cka:.6f},{sigma:.6f},{eps:.6f},'
-                        f'{cos_sim:.4f},'
+                        # f'{cos_sim:.4f},'
                         f'{align_scores[10]:.4f}\n'
                     )
                     with open(output_file, 'a') as f:
@@ -930,7 +930,7 @@ def measure_all_drift_follow_task_client_pair(args):
                             'sigma':        sigma,
                             'eps':          eps,
                             'cka':          cka,
-                            'cos_sim':      cos_sim,
+                            # 'cos_sim':      cos_sim,
                             'align@10':     align_scores[10],
                             'align@20':     align_scores[20],
                             'pair':         f'({client},{client_prime})',
