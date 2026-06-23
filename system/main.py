@@ -46,7 +46,71 @@ torch.manual_seed(0)
 
 torch.set_num_threads(1)
 torch.set_num_interop_threads(1)
+def debug_print_client_tasks(num_clients, num_tasks, cpt, dataset="cifar10", args=None):
+    if args is not None and getattr(args, "partition_options", "hetero") == "hetero":
+        print("hetero")
+        from system.utils.data_utils_mine import (
+            read_client_data_FCL_cifar10,
+            read_client_data_FCL_cifar100,
+            read_client_data_FCL_imagenet1k,
+        )
+    else:
+        print("homo")
+        from system.utils.data_utils import (
+            read_client_data_FCL_cifar10,
+            read_client_data_FCL_cifar100,
+            read_client_data_FCL_imagenet1k,
+        )
 
+    reader = {
+        "cifar10": read_client_data_FCL_cifar10,
+        "CIFAR10": read_client_data_FCL_cifar10,
+        "cifar100": read_client_data_FCL_cifar100,
+        "CIFAR100": read_client_data_FCL_cifar100,
+        "imagenet1k": read_client_data_FCL_imagenet1k,
+        "IMAGENET1k": read_client_data_FCL_imagenet1k,
+    }[dataset]
+
+    print("\n" + "=" * 100)
+    print(f"[DEBUG PARTITION] dataset={dataset} | clients={num_clients} | tasks={num_tasks} | cpt={cpt}")
+    print("=" * 100)
+
+    for cid in range(num_clients):
+        row = []
+
+        print(f"\nCLIENT {cid}")
+        print("-" * 100)
+
+        for task in range(num_tasks):
+            try:
+                _, info = reader(
+                    cid,
+                    task=task,
+                    classes_per_task=cpt,
+                    count_labels=True,
+                )
+
+                labels = info.get("assigned_labels", info.get("labels"))
+                present = info.get("present_labels", labels)
+                missing = info.get("missing_labels", [])
+                master = info.get("task_index_in_master", None)
+
+                row.append(f"T{task}:{labels}")
+
+                print(
+                    f"task {task:<2} | "
+                    f"master={master} | "
+                    f"labels={labels} | "
+                    f"present={present} | "
+                    f"missing={missing}"
+                )
+
+            except Exception as e:
+                print(f"task {task:<2} | ERROR: {e}")
+
+        print("ORDER:", " -> ".join(row))
+
+    print("=" * 100 + "\n")
 def run(args):
 
     if args.partition_options == "tuan":
@@ -76,7 +140,13 @@ def run(args):
         print(f"\n============= Running time: {i}th =============")
         print("Creating server and clients ...")
         start = time.time()
-
+        debug_print_client_tasks(
+            num_clients=args.num_clients,
+            num_tasks=args.num_tasks,
+            cpt=args.cpt,
+            dataset=args.dataset,
+            args=args,
+        )
         # Generate args.model
         if model_str == "CNN": # non-convex
             if "CIFAR100" in args.dataset:

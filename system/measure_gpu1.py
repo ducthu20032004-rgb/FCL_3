@@ -810,17 +810,60 @@ def get_shared_probe_dataset(
     y = torch.tensor(np.concatenate(y_list), dtype=torch.long)
     return Transform_dataset(x, y)
 
+def get_shared_probe_dataset_task(
+    task_id,
+    classes_per_task=2,
+    datadir='./dataset/cifar10-classes/',
+    images_per_class=1000,
+    train_images_per_class=5000,
+    split="test",
+):
+    start_cls = task_id * classes_per_task
+    end_cls = (task_id + 1) * classes_per_task
+    classes = list(range(start_cls, end_cls))
+
+    x_list, y_list = [], []
+
+    for cls in classes:
+        data_file = os.path.join(datadir, f"{cls}.npy")
+        data = np.load(data_file)
+
+        if split == "test":
+            start = train_images_per_class
+        elif split == "train":
+            start = 0
+        else:
+            raise ValueError(f"Unknown split={split}")
+
+        end = start + images_per_class
+        selected = data[start:end]
+
+        print(
+            f"[PROBE] task={task_id} class={cls} "
+            f"split={split} idx=[{start}:{end}] "
+            f"shape={selected.shape}"
+        )
+
+        x_list.append(selected)
+        y_list.append(np.full(len(selected), cls, dtype=np.int64))
+
+    x = torch.tensor(np.concatenate(x_list, axis=0), dtype=torch.float32)
+    y = torch.tensor(np.concatenate(y_list, axis=0), dtype=torch.long)
+
+    print(f"[PROBE] unique labels = {torch.unique(y).tolist()} | total={len(y)}")
+
+    return Transform_dataset(x, y)
 def measure_all_drift_follow_task_client_pair(args):
-    output_file = f'/home/ghostm211/Thu/FCL_3/outputs/client_representation_drift_{args.num_tasks}_{args.num_clients}Client_-{args.partition_options}-{args.backbone}.csv'
+    output_file = f'/home/ubuntu/thu.td/FCL_3/outputs/client_representation_drift_{args.num_tasks}_{args.num_clients}Client_-{args.partition_options}-{args.backbone}.csv'
 
     if not os.path.isfile(output_file):
         with open(output_file, 'w') as f:
             f.write('block_idx,client1,client2,t,'
                     'cka,sigma,eps,'
-                    'cosine_similarity,'
                     'align@10,align@20\n')
 
     client_pairs = list(itertools.combinations(range(args.num_clients), 2))
+    
     num_blocks   = 5
     topk_list    = [10, 20]
 
@@ -850,10 +893,10 @@ def measure_all_drift_follow_task_client_pair(args):
             scatters = pair_scatters[(client, client_prime)]
             logger.info(f'  ┌── Client pair ({client}, {client_prime})')
 
-            #ckpt_client       = get_model_path_no_round(args.saving_dir, client,       task_id)
-            ckpt_client = get_model_path(args.saving_dir, client,       task_id, 24)
-            ckpt_client_prime = get_model_path(args.saving_dir, client_prime, task_id, 24)
-            #ckpt_client_prime = get_model_path_no_round(args.saving_dir, client_prime, task_id)
+            ckpt_client       = get_model_path_no_round(args.saving_dir, client,       task_id)
+            #ckpt_client = get_model_path(args.saving_dir, client,       task_id, 24)
+            #ckpt_client_prime = get_model_path(args.saving_dir, client_prime, task_id, 24)
+            ckpt_client_prime = get_model_path_no_round(args.saving_dir, client_prime, task_id)
 
             skip = False
             for ckpt in [ckpt_client, ckpt_client_prime]:
@@ -865,35 +908,48 @@ def measure_all_drift_follow_task_client_pair(args):
 
             model_c      = load_resnet18_from_checkpoint(ckpt_client,       load_head=False)
             model_cprime = load_resnet18_from_checkpoint(ckpt_client_prime, load_head=False)
+            #model_c = load_vit_from_checkpoint(ckpt_client,num_classes=10)
+            #model_cprime = load_vit_from_checkpoint(ckpt_client_prime,num_classes=10)
             logger.info(f'  │  model_c  ← {ckpt_client}')
             logger.info(f'  │  model_c\' ← {ckpt_client_prime}')
 
-            shared_probe  = get_shared_probe_dataset()
-            model_head_c  = load_model_with_head(ckpt_client,       num_classes=args.classes)
-            model_head_cp = load_model_with_head(ckpt_client_prime, num_classes=args.classes)
+            # shared_probe = get_shared_probe_dataset_task(
+            #     task_id=task_id,
+            #     classes_per_task=args.cpt,
+            #     images_per_class=250,
+            #     train_images_per_class=5000,
+            #     split="test",
+            # )
+            shared_probe = get_shared_probe_dataset()
+            # model_head_c  = load_model_with_head(ckpt_client,       num_classes=args.classes)
+            # model_head_cp = load_model_with_head(ckpt_client_prime, num_classes=args.classes)
             loader_c      = _make_loader(shared_probe)
             loader_cp     = _make_loader(shared_probe)
 
-            logits_c_list  = []
-            logits_cp_list = []
-            for x, _ in loader_c:
-                logits_c_list.append(model_head_c(x.to(DEVICE)).detach().cpu())
-            for x, _ in loader_cp:
-                logits_cp_list.append(model_head_cp(x.to(DEVICE)).detach().cpu())
+            # logits_c_list  = []
+            # logits_cp_list = []
+            # for x, _ in loader_c:
+            #     logits_c_list.append(model_head_c(x.to(DEVICE)).detach().cpu())
+            # for x, _ in loader_cp:
+            #     logits_cp_list.append(model_head_cp(x.to(DEVICE)).detach().cpu())
 
-            logits_c  = torch.cat(logits_c_list,  dim=0)
-            logits_cp = torch.cat(logits_cp_list, dim=0)
-            cos_sim   = torch.nn.functional.cosine_similarity(logits_c, logits_cp, dim=1).mean().item()
+            # logits_c  = torch.cat(logits_c_list,  dim=0)
+            # logits_cp = torch.cat(logits_cp_list, dim=0)
+            # cos_sim   = torch.nn.functional.cosine_similarity(logits_c, logits_cp, dim=1).mean().item()
 
             for num_block in range(num_blocks):
                 target_layer = f'block{num_block}'
                 scatter      = scatters[num_block]
                 try:
+                    logger.info(f'  computing feat_c block{num_block}...')
                     feat_c  = compute_feature_resnet18(model_c,      task_id, shared_probe, target_layer, args.seed, args)
+                    logger.info(f'  computing feat_cp block{num_block}...')
                     feat_cp = compute_feature_resnet18(model_cprime, task_id, shared_probe, target_layer, args.seed, args)
-
+                    logger.info(f'  computing sigma...')
                     sigma        = compute_sigma(feat_c, feat_cp)
+                    logger.info(f'  computing eps...')
                     eps          = compute_eps(feat_c, feat_cp)
+                    logger.info(f'  computing cka...')
                     _, cka       = compute_cka(feat_c, feat_cp)
 
                     align_scores = {}
@@ -904,7 +960,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     done += 1
                     logger.info(
                         f'  │  [{done}/{total}] {target_layer} | '
-                        f'cos_sim={cos_sim:.4f}  σ={sigma:.4f}  '
+                        f'  σ={sigma:.4f}  '
                         f'ε={eps:.4f}  CKA={cka:.4f}  '
                         f'align@10={align_scores[10]:.4f}  align@20={align_scores[20]:.4f}'
                     )
@@ -914,7 +970,6 @@ def measure_all_drift_follow_task_client_pair(args):
                     line = (
                         f'{num_block},{client},{client_prime},{task_id},'
                         f'{cka:.6f},{sigma:.6f},{eps:.6f},'
-                        f'{cos_sim:.4f},'
                         f'{align_scores[10]:.4f}\n'
                     )
                     with open(output_file, 'a') as f:
@@ -930,7 +985,6 @@ def measure_all_drift_follow_task_client_pair(args):
                             'sigma':        sigma,
                             'eps':          eps,
                             'cka':          cka,
-                            'cos_sim':      cos_sim,
                             'align@10':     align_scores[10],
                             'align@20':     align_scores[20],
                             'pair':         f'({client},{client_prime})',

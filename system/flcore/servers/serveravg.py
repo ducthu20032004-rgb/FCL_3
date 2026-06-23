@@ -319,7 +319,7 @@ class FedAvg(Server):
                     
                     if i == 24:  
                         try:
-                            save_dir =  "/home/ubuntu/thu.td/FCL_3/FedAVG_ViT_alpha01/"
+                            save_dir =  "/home/ubuntu/thu.td/FCL_3/FedAVG_resnet_alpha01/"
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
@@ -592,7 +592,7 @@ class FedAvg(Server):
                 print(f"[dump global_task_acc] warning: {e}")
                     # ===== SAVE ALL CLIENT WEIGHTS AFTER EACH TASK =====
             if getattr(self.args, "save_client_weights", True):
-                save_dir = getattr(self.args, "client_weights_dir", "/home/ubuntu/thu.td/FCL_3/client_weights_Vit_alpha01")
+                save_dir = getattr(self.args, "client_weights_dir", "/home/ubuntu/thu.td/FCL_3/client_weights_resnet_alpha01")
                 os.makedirs(save_dir, exist_ok=True)
                 for client in self.clients:   # ALL clients, không chỉ selected
                     try:

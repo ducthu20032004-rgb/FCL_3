@@ -267,7 +267,44 @@ def _assemble(dataset: str, root: Path, K: int,
     }
 
     return ds, info
+    
+def debug_print_client_tasks(
+    num_clients=5,
+    num_tasks=5,
+    cpt=2,
+    dataset="cifar10",
+):
+    print("=" * 80)
+    print(f"Dataset={dataset} | Clients={num_clients} | Tasks={num_tasks}")
+    print("=" * 80)
 
+    reader = {
+        "cifar10": read_client_data_FCL_cifar10,
+        "cifar100": read_client_data_FCL_cifar100,
+        "imagenet1k": read_client_data_FCL_imagenet1k,
+    }[dataset.lower()]
+
+    for cid in range(num_clients):
+        print(f"\nCLIENT {cid}")
+        print("-" * 80)
+
+        for task in range(num_tasks):
+            _, info = reader(
+                client_id=cid,
+                task=task,
+                classes_per_task=cpt,
+                count_labels=True,
+            )
+
+            print(
+                f"task={task:<2d} | "
+                f"master={info['task_index_in_master']:<2d} | "
+                f"labels={info['assigned_labels']} | "
+                f"present={info['present_labels']} | "
+                f"missing={info['missing_labels']}"
+            )
+
+        print()
 
 # ======================
 # Public API (unchanged names/signatures)
