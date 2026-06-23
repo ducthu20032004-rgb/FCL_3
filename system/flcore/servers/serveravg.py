@@ -319,9 +319,10 @@ class FedAvg(Server):
                         client._model_after_local = copy.deepcopy(client.model)
                     except Exception:
                         pass
-                    if i == 25:  
+                    
+                    if i == 24:  
                         try:
-                            save_dir =  "/home/ghostm211/Thu/FCL_3/FedAVG_CIFAR100_5tasks/"
+                            save_dir =  "/home/ubuntu/thu.td/FCL_3/FedAVG_ViT_alpha01/"
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
@@ -594,7 +595,7 @@ class FedAvg(Server):
                 print(f"[dump global_task_acc] warning: {e}")
                     # ===== SAVE ALL CLIENT WEIGHTS AFTER EACH TASK =====
             if getattr(self.args, "save_client_weights", True):
-                save_dir = getattr(self.args, "client_weights_dir", "C:/Thu/FCL/client_weights_Vit")
+                save_dir = getattr(self.args, "client_weights_dir", "/home/ubuntu/thu.td/FCL_3/client_weights_Vit_alpha01")
                 os.makedirs(save_dir, exist_ok=True)
                 for client in self.clients:   # ALL clients, không chỉ selected
                     try:
