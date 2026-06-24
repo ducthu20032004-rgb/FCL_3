@@ -29,7 +29,10 @@ from system.flcore.metrics.average_forgetting import (
 from system.measure_gpu1 import *
 import statistics
 
-
+from system.utils.pairwise_client_similarity import (
+    _measure_pairwise_client_similarity,
+    get_shared_probe_dataset,
+)
 # ---------- Pretty logger (safe if not installed) ----------
 try:
     from system.utils.rich_progress import RichRoundLogger
@@ -117,7 +120,7 @@ class FedAvg(Server):
 
         # self.load_model()
         self.Budget = []
-
+        self._probe_dataset = None 
     def train(self):
         """
         Federated training with progress + reliable metrics capture.
@@ -319,7 +322,7 @@ class FedAvg(Server):
                     
                     if i == 24:  
                         try:
-                            save_dir =  "/home/ubuntu/thu.td/FCL_3/FedAVG_resnet_alpha01/"
+                            save_dir =  "/home/ubuntu/thu.td/FCL_3/FedAVG_ViT_alpha01/"
                             os.makedirs(save_dir, exist_ok=True)
                             save_path = f"{save_dir}/client_{client.id}_task_{task}_round_{i}.pt"
                             
@@ -592,7 +595,7 @@ class FedAvg(Server):
                 print(f"[dump global_task_acc] warning: {e}")
                     # ===== SAVE ALL CLIENT WEIGHTS AFTER EACH TASK =====
             if getattr(self.args, "save_client_weights", True):
-                save_dir = getattr(self.args, "client_weights_dir", "/home/ubuntu/thu.td/FCL_3/client_weights_resnet_alpha01")
+                save_dir = getattr(self.args, "client_weights_dir", "/home/ubuntu/thu.td/FCL_3/client_weights_Vit_alpha01")
                 os.makedirs(save_dir, exist_ok=True)
                 for client in self.clients:   # ALL clients, không chỉ selected
                     try:
@@ -601,7 +604,15 @@ class FedAvg(Server):
                         print(f"[SAVED] client={client.id} task={task} → {save_path}")
                     except Exception as save_err:
                         print(f"[ERROR] save client={client.id} task={task}: {save_err}")
-
+            # cuối for-task loop, sau dump CSV
+            self._measure_pairwise_client_similarity(
+                task=task,
+                glob_iter=glob_iter,
+                csv_path=getattr(self.args, "pairwise_sim_csv", "./pairwise_similarity.csv"),
+                layers=["block1", "block2", "block3", "block4"],
+                probe_datadir=getattr(self.args, "probe_datadir", "./dataset/cifar10-classes/"),
+                images_per_class=75,
+            )
             # ===== SAVE CHECKPOINT PER TASK =====
             if getattr(self.args, "save_checkpoint", False):
                 tag = f"task{task}"
@@ -712,3 +723,7 @@ class FedAvg(Server):
     #         #         # need eval before data update
     #         #         self.send_models()
     #         #         self.eval_task(task=task, glob_iter=glob_iter, flag="global")
+
+FedAvg._measure_pairwise_client_similarity = _measure_pairwise_client_similarity
+
+
