@@ -94,7 +94,7 @@ def _measure_pairwise_client_similarity(
     self,
     task: int,
     glob_iter: int,
-    csv_path: str = "./pairwise_similarity_hete01.csv",
+    csv_path: str = "./pairwise_similarity.csv",
     layers: Optional[List[str]] = None,
     topk_cknna: int = 10,
     probe_datadir: str = "./dataset/cifar10-classes/",

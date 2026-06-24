@@ -860,6 +860,7 @@ def measure_all_drift_follow_task_client_pair(args):
         with open(output_file, 'w') as f:
             f.write('block_idx,client1,client2,t,'
                     'cka,sigma,eps,'
+                    # 'cosine_similarity,'
                     'align@10,align@20\n')
 
     client_pairs = list(itertools.combinations(range(args.num_clients), 2))
@@ -960,7 +961,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     done += 1
                     logger.info(
                         f'  │  [{done}/{total}] {target_layer} | '
-                        f'  σ={sigma:.4f}  '
+                        f' σ={sigma:.4f}  '
                         f'ε={eps:.4f}  CKA={cka:.4f}  '
                         f'align@10={align_scores[10]:.4f}  align@20={align_scores[20]:.4f}'
                     )
@@ -970,6 +971,7 @@ def measure_all_drift_follow_task_client_pair(args):
                     line = (
                         f'{num_block},{client},{client_prime},{task_id},'
                         f'{cka:.6f},{sigma:.6f},{eps:.6f},'
+                        # f'{cos_sim:.4f},'
                         f'{align_scores[10]:.4f}\n'
                     )
                     with open(output_file, 'a') as f:
@@ -985,6 +987,7 @@ def measure_all_drift_follow_task_client_pair(args):
                             'sigma':        sigma,
                             'eps':          eps,
                             'cka':          cka,
+                            # 'cos_sim':      cos_sim,
                             'align@10':     align_scores[10],
                             'align@20':     align_scores[20],
                             'pair':         f'({client},{client_prime})',
